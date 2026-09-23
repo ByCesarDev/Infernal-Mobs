@@ -16,6 +16,7 @@ import { formatShortName } from "../systems/namingSystem.js";
 import { getModifierHandler } from "../data/modifierDefinitions.js";
 import { isEntityValid } from "../util/entity.js";
 import { forgetCombatTarget, recordCombatInteraction } from "./combatMemory.js";
+import { clearUnyieldingState } from "../modifiers/unyielding.js";
 import { getCurrentTick } from "./tickScheduler.js";
 
 /**
@@ -73,6 +74,7 @@ export function initializeEventRouter() {
     const deadEntity = event.deadEntity;
     if (deadEntity) {
       forgetCombatTarget(deadEntity.id);
+      clearUnyieldingState(deadEntity.id);
       const state = getInfernalState(deadEntity);
       if (state && state.isInfernal) {
         const record = getTrackedInfernal(deadEntity.id);
@@ -94,6 +96,7 @@ export function initializeEventRouter() {
   world.afterEvents.entityRemove.subscribe(({ removedEntityId }) => {
     if (removedEntityId) {
       forgetCombatTarget(removedEntityId);
+      clearUnyieldingState(removedEntityId);
       unregisterInfernal(removedEntityId);
     }
   });

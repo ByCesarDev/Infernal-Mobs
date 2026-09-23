@@ -39,6 +39,7 @@ import { initializeTestScriptEvents } from "../commands/testScriptEvents.js";
 import { initializeEventRouter } from "./eventRouter.js";
 import { pruneInactiveInfernals, tickActiveInfernals } from "./infernalManager.js";
 import { pruneCombatMemory } from "./combatMemory.js";
+import { pruneUnyieldingSnapshots } from "../modifiers/unyielding.js";
 import { registerRecurringTask, startTickScheduler } from "./tickScheduler.js";
 import { tickHudSystem } from "../systems/hudSystem.js";
 import { tickInfernalAura } from "../systems/particleSystem.js";
@@ -82,10 +83,11 @@ export function initializeInfernalMobs() {
     tickHudSystem(tick);
   });
 
-  // Prune dead/unloaded infernals and stale combat memory every 100 ticks (5 seconds)
+  // Prune dead/unloaded infernals, stale combat memory, and unyielding snapshots every 100 ticks (5 seconds)
   registerRecurringTask("cachePruning", 100, (tick) => {
     pruneInactiveInfernals();
     pruneCombatMemory(tick);
+    pruneUnyieldingSnapshots(tick);
   });
 
   // 5. Start main scheduler loop

@@ -176,12 +176,16 @@ function explodeSplashPotion(dimension, location, effectType, ownerId) {
           victim.addEffect("minecraft:weakness", Math.round(1200 * factor), { amplifier: 0, showParticles: true });
           break;
         case "harming":
-        default:
-          victim.addEffect("minecraft:instant_damage", 1, {
-            amplifier: factor > 0.6 ? 1 : 0,
-            showParticles: true
-          });
+        default: {
+          // Java Potions.HARMING: base 6 magic damage scaled continuously by splash falloff factor
+          const magicDamage = Math.max(1, Math.round(6.0 * factor));
+          try {
+            victim.applyDamage(magicDamage, { cause: "magic" });
+          } catch {
+            victim.addEffect("minecraft:instant_damage", 1, { amplifier: 0, showParticles: true });
+          }
           break;
+        }
       }
     }
   } catch (error) {

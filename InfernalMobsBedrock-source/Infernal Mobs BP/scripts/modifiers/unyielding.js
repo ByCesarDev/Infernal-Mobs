@@ -69,6 +69,27 @@ function cancelAppliedKnockback(entity, tick) {
   });
 }
 
+/**
+ * Clears pending knockback snapshot for an entity when it dies or is removed
+ * @param {string} entityId
+ */
+export function clearUnyieldingState(entityId) {
+  pendingKnockback.delete(entityId);
+}
+
+/**
+ * Prunes orphaned snapshots older than maxAgeTicks (e.g. cancelled hits by Ender/Ninja)
+ * @param {number} currentTick
+ * @param {number} [maxAgeTicks]
+ */
+export function pruneUnyieldingSnapshots(currentTick, maxAgeTicks = 5) {
+  for (const [id, snapshot] of pendingKnockback.entries()) {
+    if (currentTick - snapshot.tick > maxAgeTicks) {
+      pendingKnockback.delete(id);
+    }
+  }
+}
+
 export const UnyieldingHandler = {
   id: "unyielding",
 
