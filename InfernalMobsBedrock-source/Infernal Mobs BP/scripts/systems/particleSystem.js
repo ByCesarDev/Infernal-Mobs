@@ -7,10 +7,9 @@ import { getAllActiveInfernals } from "../core/infernalManager.js";
 import { isEntityAlive, isEntityValid } from "../util/entity.js";
 
 /**
- * Ticks infernal mob particle aura (called every 2 ticks = 100ms)
- * Matches RendererBossGlow.java logic:
- * Emits 1 ParticleTypes.WITCH (Bedrock: minecraft:witchspell) with random offsets around the mob
- * only if a player is within 32 blocks.
+ * Ticks infernal mob particle aura (called every 16 ticks = ~800ms)
+ * Calibrated for Bedrock's minecraft:witchspell_emitter which emits a burst of particles lasting ~0.8-1.0s.
+ * Only emits if a player is within 32 blocks (matching RendererBossGlow.java distance check).
  */
 export function tickInfernalAura(currentTick) {
   const activeRecords = getAllActiveInfernals();
@@ -29,13 +28,10 @@ export function tickInfernalAura(currentTick) {
 
       if (nearbyPlayers.length === 0) continue;
 
-      // Particle spawn location matching RendererBossGlow.java:
-      // x + (random - 0.5) * bbWidth
-      // y + random * bbHeight - 0.25
-      // z + (random - 0.5) * bbWidth
-      const xOffset = (Math.random() - 0.5) * 0.8;
-      const yOffset = Math.random() * 1.8 - 0.25;
-      const zOffset = (Math.random() - 0.5) * 0.8;
+      // Position emitter near mob torso center with slight random deviation
+      const xOffset = (Math.random() - 0.5) * 0.5;
+      const yOffset = 0.5 + Math.random() * 0.8;
+      const zOffset = (Math.random() - 0.5) * 0.5;
 
       const particleLoc = {
         x: mob.location.x + xOffset,
