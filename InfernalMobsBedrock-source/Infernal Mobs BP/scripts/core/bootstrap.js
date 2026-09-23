@@ -65,8 +65,8 @@ export function initializeInfernalMobs() {
     tickActiveInfernals(tick);
   });
 
-  // Infernal aura particles every 16 ticks (~0.8s, calibrated for Bedrock's witchspell_emitter burst duration)
-  registerRecurringTask("infernalAura", 16, (tick) => {
+  // Infernal aura particles every 2 ticks (100ms, Java 1:1 rate with 1 individual particle)
+  registerRecurringTask("infernalAura", 2, (tick) => {
     tickInfernalAura(tick);
   });
 

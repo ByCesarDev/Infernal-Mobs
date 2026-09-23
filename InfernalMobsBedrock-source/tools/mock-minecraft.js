@@ -86,3 +86,12 @@ export class ItemStack {
     return null;
   }
 }
+
+export class MolangVariableMap {
+  setColorRGB() {}
+  setColorRGBA() {}
+  setFloat() {}
+  setSpeedAndDirection() {}
+  setVector3() {}
+}
+
