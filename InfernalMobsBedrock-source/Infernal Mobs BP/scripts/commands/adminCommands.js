@@ -12,6 +12,7 @@ import { getConfig, loadWorldConfig, resetWorldConfig, setModifierEnabledConfig,
 import { createInfernal } from "../core/spawnManager.js";
 import { getTrackedInfernal, unregisterInfernal } from "../core/infernalManager.js";
 import { restoreVanillaHealth } from "../systems/healthSystem.js";
+import { formatFullName, ensureStableName } from "../systems/namingSystem.js";
 import { getChokeBackendName } from "../core/capabilityDetector.js";
 import { isEntityAlive, isEntityValid, isPlayer, safeGetHealth } from "../util/entity.js";
 import { distance } from "../util/vector.js";
@@ -267,7 +268,9 @@ export function handleDebugCommand(origin) {
     `§7Infernal: §f${Boolean(state?.isInfernal)}\n`;
 
   if (state) {
-    debugMsg += `§7Schema: §f${state.schema} | Tier: §f${state.tier}\n` +
+    ensureStableName(state, target);
+    debugMsg += `§7Name: §f${formatFullName(state)}\n` +
+      `§7Schema: §f${state.schema} | Tier: §f${state.tier}\n` +
       `§7Modifiers: §e${state.modifiers?.join(", ")}\n` +
       `§7Health: §f${health?.currentValue ?? "?"} / ${state.infernalMaxHealth} (Base: ${state.baseMaxHealth})\n` +
       `§71UP Consumed: §f${Boolean(state.persistent?.oneUpConsumed)}\n` +

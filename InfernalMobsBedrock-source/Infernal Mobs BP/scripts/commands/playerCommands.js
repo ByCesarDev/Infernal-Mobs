@@ -6,7 +6,7 @@
 import { CustomCommandStatus } from "@minecraft/server";
 import { MODIFIER_IDS } from "../data/incompatibilities.js";
 import { MODIFIER_METADATA } from "../data/modifierNames.js";
-import { formatFullName, formatModifierRows } from "../systems/namingSystem.js";
+import { ensureStableName, formatFullName, formatModifierRows } from "../systems/namingSystem.js";
 import { getInfernalState } from "../storage/entityState.js";
 import { isPlayerHudEnabled, setPlayerHudEnabled } from "../storage/playerPreferences.js";
 import { isEntityAlive, isEntityValid, isPlayer, safeGetHealth } from "../util/entity.js";
@@ -73,6 +73,8 @@ export function handleInfoCommand(origin) {
   }
 
   const state = found.state;
+  ensureStableName(state, found.entity);
+
   const health = safeGetHealth(found.entity);
   const hp = health ? Math.ceil(health.currentValue) : "?";
   const max = state.infernalMaxHealth ?? (health?.effectiveMax ?? "?");

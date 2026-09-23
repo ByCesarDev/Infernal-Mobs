@@ -186,11 +186,24 @@ export function createInfernal(entity, forcedTier = null, forcedModifiers = null
   const baseMaxHealth = health.defaultValue ?? health.effectiveMax ?? 20;
   const infernalMaxHealth = calculateInfernalMaxHealth(baseMaxHealth, modifiers.length);
 
-  // Pick prefix and suffix from modifier metadata
-  const prefixMod = pickRandom(modifiers) ?? modifiers[0];
-  const suffixMod = modifiers.length > 1
-    ? (modifiers.find((m) => m !== prefixMod) ?? modifiers[1])
+  // Pick prefix and suffix from modifier metadata (Java 1:1 logic)
+  const prefixIndex = randomInt(0, modifiers.length - 1);
+  const prefixMod = modifiers[prefixIndex];
+  const prefixMeta = MODIFIER_METADATA[prefixMod];
+  const prefixText = (prefixMeta && prefixMeta.prefixes && prefixMeta.prefixes.length > 0)
+    ? pickRandom(prefixMeta.prefixes)
     : prefixMod;
+
+  let suffixMod = null;
+  let suffixText = "";
+  if (modifiers.length > 1) {
+    const suffixIndex = (prefixIndex + 1) % modifiers.length;
+    suffixMod = modifiers[suffixIndex];
+    const suffixMeta = MODIFIER_METADATA[suffixMod];
+    suffixText = (suffixMeta && suffixMeta.suffixes && suffixMeta.suffixes.length > 0)
+      ? pickRandom(suffixMeta.suffixes)
+      : "";
+  }
 
   const state = {
     schema: SCHEMA_VERSION,
@@ -202,7 +215,9 @@ export function createInfernal(entity, forcedTier = null, forcedModifiers = null
     tier,
     name: {
       prefixModifier: prefixMod,
+      prefixText,
       suffixModifier: suffixMod,
+      suffixText,
       speciesKey: species
     },
     persistent: {

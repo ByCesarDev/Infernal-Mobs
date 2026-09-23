@@ -4,7 +4,7 @@
  */
 
 import { world } from "@minecraft/server";
-import { formatFullName, formatModifierRows, formatShortName } from "./namingSystem.js";
+import { ensureStableName, formatFullName, formatModifierRows, formatShortName } from "./namingSystem.js";
 import { getInfernalState } from "../storage/entityState.js";
 import { isPlayerHudEnabled } from "../storage/playerPreferences.js";
 import { getConfig } from "../storage/worldConfig.js";
@@ -111,6 +111,8 @@ function renderHudForPlayer(player, session) {
     return;
   }
 
+  ensureStableName(state, entity);
+
   const health = safeGetHealth(entity);
   const currentHp = health ? health.currentValue : (state.infernalMaxHealth ?? 20);
   const maxHp = state.infernalMaxHealth ?? (health?.effectiveMax ?? 20);
@@ -118,14 +120,14 @@ function renderHudForPlayer(player, session) {
   // Line 1: Title & Full Name
   const fullName = formatFullName(state);
 
-  // Line 2: Modifier names grouped into 5s
+  // Lines 2+: Modifier names grouped into 5s
   const modRows = formatModifierRows(state.modifiers);
-  const modLine = modRows[0] ?? "";
+  const modifierLines = modRows.map((row) => `§7${row}`);
 
-  // Line 3: Health Bar
+  // Last Line: Health Bar
   const healthBar = buildHealthBar(currentHp, maxHp, 10);
 
-  const lines = [fullName, `§7${modLine}`, healthBar];
+  const lines = [fullName, ...modifierLines, healthBar];
   const combinedText = lines.join("\n");
 
   if (session.lastRenderedText !== combinedText) {

@@ -4,6 +4,7 @@
  */
 
 import { PROPERTIES, SCHEMA_VERSION, TIER } from "../core/constants.js";
+import { MODIFIER_METADATA } from "../data/modifierNames.js";
 import { isEntityValid, safeGetHealth, getSpeciesKey } from "../util/entity.js";
 import { logDebug, logError } from "../util/log.js";
 import { setInfernalState } from "./entityState.js";
@@ -77,7 +78,16 @@ export function migrateEntityIfNeeded(entity) {
 
     const species = getSpeciesKey(entity);
     const prefixMod = modifiers[0] ?? "";
-    const suffixMod = modifiers.length > 1 ? modifiers[1] : modifiers[0] ?? "";
+    const prefixMeta = MODIFIER_METADATA[prefixMod];
+    const prefixText = prefixMeta?.prefixes?.length > 0 ? prefixMeta.prefixes[0] : prefixMod;
+
+    let suffixMod = null;
+    let suffixText = "";
+    if (modifiers.length > 1) {
+      suffixMod = modifiers[1];
+      const suffixMeta = MODIFIER_METADATA[suffixMod];
+      suffixText = suffixMeta?.suffixes?.length > 0 ? suffixMeta.suffixes[0] : "";
+    }
 
     const newState = {
       schema: SCHEMA_VERSION,
@@ -89,7 +99,9 @@ export function migrateEntityIfNeeded(entity) {
       tier,
       name: {
         prefixModifier: prefixMod,
+        prefixText,
         suffixModifier: suffixMod,
+        suffixText,
         speciesKey: species
       },
       persistent: {

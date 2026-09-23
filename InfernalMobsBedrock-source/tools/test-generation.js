@@ -12,6 +12,7 @@ import { DEFAULT_CONFIG } from "../Infernal Mobs BP/scripts/data/defaultConfig.j
 import { rollModifierCount, selectModifiers, calculateVisualTier } from "../Infernal Mobs BP/scripts/core/spawnManager.js";
 import { calculateInfernalMaxHealth } from "../Infernal Mobs BP/scripts/systems/healthSystem.js";
 import { INCOMPATIBLE_MAP, SPECIES_BANNED_MODS } from "../Infernal Mobs BP/scripts/data/incompatibilities.js";
+import { formatShortName, formatFullName, formatModifierRows, ensureStableName } from "../Infernal Mobs BP/scripts/systems/namingSystem.js";
 
 console.log("Starting statistical validation with 100,000 trials...");
 
@@ -95,6 +96,65 @@ console.log(`- Incompatibility violations: ${incompatibilityViolations}`);
 console.log(`- Creeper ban violations: ${creeperViolations}`);
 console.log(`- Spider ban violations: ${spiderViolations}`);
 console.log(`- Health formula violations: ${healthFormulaViolations}`);
+
+// Test name stability and HUD modifier row formatting
+console.log("\nVerifying name stability and HUD modifier rows...");
+const testState = {
+  tier: "infernal",
+  modifiers: ["fiery", "storm", "regen", "darkness", "vengeance", "1up", "sprint", "sticky", "webber", "wither", "quicksand", "rust"],
+  name: {
+    prefixModifier: "weakness",
+    prefixText: "apathetic",
+    suffixModifier: "quicksand",
+    suffixText: "theSlow",
+    speciesKey: "zombie"
+  }
+};
+
+const short1 = formatShortName(testState);
+const full1 = formatFullName(testState);
+
+for (let r = 0; r < 100; r++) {
+  if (formatShortName(testState) !== short1 || formatFullName(testState) !== full1) {
+    throw new Error("Name stability violation: name changed across calls!");
+  }
+}
+
+// Verify shortName prefix matches fullName prefix
+if (!full1.includes("apathetic") || !short1.includes("apathetic")) {
+  throw new Error("Prefix mismatch violation!");
+}
+
+// Verify 12 modifiers formatting in rows of 5
+const rows = formatModifierRows(testState.modifiers);
+if (rows.length !== 3) {
+  throw new Error(`Expected 3 modifier rows for 12 modifiers, got ${rows.length}`);
+}
+const rowCounts = rows.map((r) => r.split(" · ").length);
+if (rowCounts[0] !== 5 || rowCounts[1] !== 5 || rowCounts[2] !== 2) {
+  throw new Error(`Expected [5, 5, 2] modifiers per row, got ${JSON.stringify(rowCounts)}`);
+}
+
+// Test ensureStableName on state missing prefixText / suffixText
+const legacyState = {
+  tier: "ultra",
+  modifiers: ["fiery", "storm", "regen"],
+  name: {
+    prefixModifier: "fiery",
+    speciesKey: "skeleton"
+  }
+};
+ensureStableName(legacyState);
+if (!legacyState.name.prefixText || !legacyState.name.suffixText) {
+  throw new Error("ensureStableName failed to populate prefixText or suffixText!");
+}
+const legShort = formatShortName(legacyState);
+for (let r = 0; r < 50; r++) {
+  if (formatShortName(legacyState) !== legShort) {
+    throw new Error("Legacy name stability violation!");
+  }
+}
+console.log("Name stability & 12-modifier row tests passed with zero violations!");
 
 if (duplicateViolations === 0 && incompatibilityViolations === 0 && creeperViolations === 0 && spiderViolations === 0 && healthFormulaViolations === 0) {
   console.log("\nALL 100,000 TESTS PASSED WITH ZERO VIOLATIONS!");
