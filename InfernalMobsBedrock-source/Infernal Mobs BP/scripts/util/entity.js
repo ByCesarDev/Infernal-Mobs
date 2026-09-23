@@ -124,8 +124,15 @@ export function isHostile(entity) {
   if (isTamed(entity)) return false;
   if (KNOWN_HOSTILES.has(entity.typeId)) return true;
 
-  // Support for custom addon monsters
+  // Support for custom addon monsters (universal Bedrock equivalent to Java's Enemy / IMob interface)
   try {
+    if (typeof entity.matches === "function" && entity.matches({ families: ["monster"] })) {
+      return true;
+    }
+    const typeFamily = entity.getComponent("minecraft:type_family");
+    if (typeFamily && typeof typeFamily.hasTypeFamily === "function" && typeFamily.hasTypeFamily("monster")) {
+      return true;
+    }
     if (entity.target) return true;
   } catch {}
 
