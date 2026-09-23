@@ -6,13 +6,12 @@ const root = resolve(import.meta.dirname, "..");
 const bpDir = existsSync(join(root, "Infernal Mobs BP")) ? "Infernal Mobs BP" : "behavior_pack";
 const rpDir = existsSync(join(root, "Infernal Mobs RP")) ? "Infernal Mobs RP" : "resource_pack";
 const dist = join(root, "dist");
-const stage = join(dist, "stage");
-const behaviorArchive = join(stage, "InfernalMobsBedrock-BP.mcpack");
-const resourceArchive = join(stage, "InfernalMobsBedrock-RP.mcpack");
+const behaviorArchive = join(dist, "InfernalMobsBedrock-BP.mcpack");
+const resourceArchive = join(dist, "InfernalMobsBedrock-RP.mcpack");
 const addonArchive = join(dist, "InfernalMobsBedrock.mcaddon");
 
 rmSync(dist, { recursive: true, force: true });
-mkdirSync(stage, { recursive: true });
+mkdirSync(dist, { recursive: true });
 
 function runZip(archivePath, cwd, entries) {
   try {
@@ -26,21 +25,24 @@ function runZip(archivePath, cwd, entries) {
     if (err.code !== "ENOENT") throw err;
   }
 
-  // Fallback to bsdtar (built-in on Windows 10/11)
+  // Fallback to bsdtar (built-in on Windows 10/11) with explicit zip format
   try {
     if (cwd) {
-      execFileSync("tar", ["-a", "-c", "-f", archivePath, "*"], { cwd });
+      execFileSync("tar", ["--format", "zip", "-c", "-f", archivePath, "*"], { cwd });
     } else {
-      execFileSync("tar", ["-a", "-c", "-f", archivePath, "-C", stage, "InfernalMobsBedrock-BP.mcpack", "InfernalMobsBedrock-RP.mcpack"]);
+      execFileSync("tar", ["--format", "zip", "-c", "-f", archivePath, "-C", dist, "InfernalMobsBedrock-BP.mcpack", "InfernalMobsBedrock-RP.mcpack"]);
     }
     return;
   } catch (err) {
-    // Fallback to powershell Compress-Archive
-    if (cwd) {
-      execFileSync("powershell", ["-NoProfile", "-Command", `Compress-Archive -Path '${cwd}/*' -DestinationPath '${archivePath}' -Force`]);
-    } else {
-      execFileSync("powershell", ["-NoProfile", "-Command", `Compress-Archive -Path '${behaviorArchive}','${resourceArchive}' -DestinationPath '${archivePath}' -Force`]);
-    }
+    if (err.code !== "ENOENT") throw err;
+  }
+
+  // Fallback to powershell Compress-Archive
+  const tempZip = archivePath + ".temp.zip";
+  if (cwd) {
+    execFileSync("powershell", ["-NoProfile", "-Command", `Compress-Archive -Path '${cwd}/*' -DestinationPath '${tempZip}' -Force; Move-Item -Path '${tempZip}' -Destination '${archivePath}' -Force`]);
+  } else {
+    execFileSync("powershell", ["-NoProfile", "-Command", `Compress-Archive -Path '${behaviorArchive}','${resourceArchive}' -DestinationPath '${tempZip}' -Force; Move-Item -Path '${tempZip}' -Destination '${archivePath}' -Force`]);
   }
 }
 
@@ -49,7 +51,10 @@ zipDirectory(join(root, rpDir), resourceArchive);
 runZip(addonArchive, null, [behaviorArchive, resourceArchive]);
 cpSync(join(root, "README.md"), join(dist, "README.md"));
 cpSync(join(root, "LICENSE-NOTICE.md"), join(dist, "LICENSE-NOTICE.md"));
-console.log(addonArchive);
+console.log(`Created:
+- ${behaviorArchive}
+- ${resourceArchive}
+- ${addonArchive}`);
 
 function zipDirectory(source, target) {
   runZip(target, source);
