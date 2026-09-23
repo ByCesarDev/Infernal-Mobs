@@ -8,8 +8,19 @@
  * 5. Health formula verification: baseMaxHealth * modifierCount * modHealthFactor
  */
 
+import { existsSync, copyFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+// Ensure @minecraft/server mock is available in node_modules if needed
+const mockSrc = resolve("tools/mock-minecraft.js");
+const mockDest = resolve("node_modules/@minecraft/server/index.js");
+if (!existsSync(mockDest) && existsSync(mockSrc)) {
+  copyFileSync(mockSrc, mockDest);
+}
+
 import { DEFAULT_CONFIG } from "../Infernal Mobs BP/scripts/data/defaultConfig.js";
-import { rollModifierCount, selectModifiers, calculateVisualTier } from "../Infernal Mobs BP/scripts/core/spawnManager.js";
+import { TIER } from "../Infernal Mobs BP/scripts/core/constants.js";
+import { rollInfernalSpawn, selectModifiers, calculateVisualTier } from "../Infernal Mobs BP/scripts/core/spawnManager.js";
 import { calculateInfernalMaxHealth } from "../Infernal Mobs BP/scripts/systems/healthSystem.js";
 import { INCOMPATIBLE_MAP, SPECIES_BANNED_MODS } from "../Infernal Mobs BP/scripts/data/incompatibilities.js";
 import { formatShortName, formatFullName, formatModifierRows, ensureStableName } from "../Infernal Mobs BP/scripts/systems/namingSystem.js";
@@ -17,7 +28,8 @@ import { formatShortName, formatFullName, formatModifierRows, ensureStableName }
 console.log("Starting statistical validation with 100,000 trials...");
 
 const TRIALS = 100000;
-let eliteCount = 0;
+let eliteSpawns = 0;
+let rareOnlyCount = 0;
 let ultraCount = 0;
 let infernalCount = 0;
 
@@ -28,18 +40,21 @@ let spiderViolations = 0;
 let healthFormulaViolations = 0;
 
 for (let i = 0; i < TRIALS; i++) {
-  const count = rollModifierCount(DEFAULT_CONFIG);
-  if (count > 0) {
-    eliteCount++;
-    if (count >= 5 && count <= 8) {
-      ultraCount++;
-    } else if (count >= 8) {
+  const roll = rollInfernalSpawn(DEFAULT_CONFIG);
+  if (roll.count > 0) {
+    eliteSpawns++;
+
+    if (roll.tier === TIER.INFERNAL) {
       infernalCount++;
+    } else if (roll.tier === TIER.ULTRA) {
+      ultraCount++;
+    } else {
+      rareOnlyCount++;
     }
 
     // Test selection on random species
     const species = i % 3 === 0 ? "minecraft:creeper" : i % 3 === 1 ? "minecraft:spider" : "minecraft:zombie";
-    const selected = selectModifiers(count, species, DEFAULT_CONFIG);
+    const selected = selectModifiers(roll.count, species, DEFAULT_CONFIG);
 
     // 1. Check duplicates
     const unique = new Set(selected);
@@ -87,15 +102,34 @@ for (let i = 0; i < TRIALS; i++) {
   }
 }
 
+const eliteRate = eliteSpawns / TRIALS;
+const ultraOrAbove = ultraCount + infernalCount;
+const ultraRate = eliteSpawns > 0 ? ultraOrAbove / eliteSpawns : 0;
+const infernalRate = ultraOrAbove > 0 ? infernalCount / ultraOrAbove : 0;
+
 console.log(`\nResults across ${TRIALS.toLocaleString()} trials:`);
-console.log(`- Elite spawns: ${eliteCount} (Rate: ${(eliteCount / TRIALS * 100).toFixed(2)}%, expected ~${(100/15).toFixed(2)}%)`);
-console.log(`- Ultra upgrades: ${ultraCount}`);
-console.log(`- Infernal upgrades: ${infernalCount}`);
+console.log(`- Total Infernal Spawns: ${eliteSpawns} (Rate: ${(eliteRate * 100).toFixed(2)}%, expected ~6.67%)`);
+console.log(`- Rare spawns: ${rareOnlyCount}`);
+console.log(`- Ultra upgrades (Ultra total ${ultraOrAbove}): ${ultraCount} (Upgrade rate: ${(ultraRate * 100).toFixed(2)}%, expected ~14.29%)`);
+console.log(`- Infernal upgrades: ${infernalCount} (Infernal upgrade rate: ${(infernalRate * 100).toFixed(2)}%, expected ~14.29%)`);
 console.log(`- Duplicate violations: ${duplicateViolations}`);
 console.log(`- Incompatibility violations: ${incompatibilityViolations}`);
 console.log(`- Creeper ban violations: ${creeperViolations}`);
 console.log(`- Spider ban violations: ${spiderViolations}`);
 console.log(`- Health formula violations: ${healthFormulaViolations}`);
+
+// Statistical tolerance bounds assertions
+if (eliteSpawns < 6100 || eliteSpawns > 7200) {
+  throw new Error(`Elite spawn rate out of statistical tolerance! Got ${eliteSpawns} (${(eliteRate * 100).toFixed(2)}%), expected ~6667 (6.67%)`);
+}
+
+if (ultraRate < 0.12 || ultraRate > 0.17) {
+  throw new Error(`Ultra upgrade rate out of statistical tolerance! Got ${(ultraRate * 100).toFixed(2)}%, expected ~14.29%`);
+}
+
+if (infernalRate < 0.10 || infernalRate > 0.19) {
+  throw new Error(`Infernal upgrade rate out of statistical tolerance! Got ${(infernalRate * 100).toFixed(2)}%, expected ~14.29%`);
+}
 
 // Test name stability and HUD modifier row formatting
 console.log("\nVerifying name stability and HUD modifier rows...");

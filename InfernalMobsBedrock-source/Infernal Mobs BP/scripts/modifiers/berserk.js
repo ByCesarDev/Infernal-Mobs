@@ -21,13 +21,18 @@ export const BerserkHandler = {
 
     if (!isEntityValid(attacker) || !isEntityAlive(attacker) || originalDamage <= 0) return;
 
-    // Apply self-damage equal to original unmitigated damage
-    setDamageGuard(attacker.id, DAMAGE_GUARDS.BERSERK_SELF, tick);
-    try {
-      attacker.applyDamage(originalDamage, {
-        cause: "override"
-      });
-    } catch {}
+    // Queue self-damage equal to original unmitigated damage to be executed outside restricted mode
+    if (!context.pendingActions) context.pendingActions = [];
+    context.pendingActions.push(() => {
+      if (isEntityValid(attacker) && isEntityAlive(attacker)) {
+        setDamageGuard(attacker.id, DAMAGE_GUARDS.BERSERK_SELF, tick);
+        try {
+          attacker.applyDamage(originalDamage, {
+            cause: "override"
+          });
+        } catch {}
+      }
+    });
 
     // Double outgoing damage and clamp to maxDamage
     const config = getConfig();

@@ -4,8 +4,32 @@
  */
 
 import { hasLineOfSight } from "../systems/lineOfSight.js";
-import { isCreativePlayer, isEntityAlive, isEntityValid, isPlayer, isSpectatorPlayer } from "../util/entity.js";
-import { distance, distanceSquared } from "../util/vector.js";
+import { isCreativePlayer, isEntityAlive, isEntityValid, isHostile, isPlayer, isSpectatorPlayer } from "../util/entity.js";
+import { distanceSquared } from "../util/vector.js";
+import { getCurrentTick } from "./tickScheduler.js";
+
+// Cache players by dimension ID per tick to avoid repeated C++ API calls
+const cachedPlayersByDim = new Map();
+let lastCacheTick = -1;
+
+function getCachedDimensionPlayers(dimension) {
+  const now = getCurrentTick();
+  if (now !== lastCacheTick) {
+    cachedPlayersByDim.clear();
+    lastCacheTick = now;
+  }
+
+  const dimId = dimension.id;
+  if (!cachedPlayersByDim.has(dimId)) {
+    try {
+      cachedPlayersByDim.set(dimId, dimension.getPlayers() || []);
+    } catch {
+      cachedPlayersByDim.set(dimId, []);
+    }
+  }
+
+  return cachedPlayersByDim.get(dimId);
+}
 
 /**
  * Validates whether a target candidate is legally attackable by an infernal mob
@@ -26,19 +50,15 @@ export function isValidTarget(mob, target, maxDistance = 20) {
 }
 
 /**
- * Finds the nearest eligible player within radius
+ * Finds the nearest eligible player within radius using tick-cached players
  */
 export function getNearestPlayerTarget(mob, maxDistance = 12) {
   if (!isEntityValid(mob)) return null;
 
   try {
-    const players = mob.dimension.getPlayers({
-      location: mob.location,
-      maxDistance
-    });
-
+    const players = getCachedDimensionPlayers(mob.dimension);
     let nearest = null;
-    let minDistanceSq = Infinity;
+    let minDistanceSq = maxDistance * maxDistance;
 
     for (const player of players) {
       if (!isValidTarget(mob, player, maxDistance)) continue;
@@ -56,7 +76,10 @@ export function getNearestPlayerTarget(mob, maxDistance = 12) {
 }
 
 /**
- * Resolves current attack target for the mob (either mob.target or nearest player)
+ * Resolves current attack target for the mob:
+ * 1. Checks mob.target if present and valid within maxDistance
+ * 2. If no target, only naturally falls back if mob is hostile (Java: instanceof Enemy)
+ * 3. Falls back to nearest player within 7.5 blocks with confirmed line of sight
  */
 export function resolveTarget(mob, maxDistance = 15) {
   if (!isEntityValid(mob)) return null;
@@ -70,5 +93,16 @@ export function resolveTarget(mob, maxDistance = 15) {
     return target;
   }
 
-  return getNearestPlayerTarget(mob, maxDistance);
+  // Java Parity: only hostile mobs scan for nearby players when unaggroed
+  if (!isHostile(mob)) {
+    return null;
+  }
+
+  // Java uses 7.5f fallback radius for unassigned attackTarget
+  const fallbackPlayer = getNearestPlayerTarget(mob, 7.5);
+  if (fallbackPlayer && hasLineOfSight(mob, fallbackPlayer)) {
+    return fallbackPlayer;
+  }
+
+  return null;
 }

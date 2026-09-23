@@ -32,8 +32,8 @@ export function shootFireball(mob, target) {
       z: targetLoc.z - spawnPos.z
     });
 
-    // Spawn fireball entity slightly in front of the caster to avoid self-collision
-    const projectile = dim.spawnEntity("minecraft:small_fireball", {
+    // Spawn large fireball entity (Ghast fireball, explosion power 1 in Java)
+    const projectile = dim.spawnEntity("minecraft:fireball", {
       x: spawnPos.x + dir.x * 1.5,
       y: spawnPos.y + dir.y * 1.5,
       z: spawnPos.z + dir.z * 1.5
@@ -66,6 +66,11 @@ export function shootFireball(mob, target) {
 
 /**
  * Throws an alchemist splash potion or applies targeted potion effect
+ * Exact Java parity:
+ * - Slowness: 30s (600 ticks)
+ * - Poison: 30s (600 ticks)
+ * - Weakness: 60s (1200 ticks)
+ * - Harming: Instant damage
  * @param {import("@minecraft/server").Entity} mob
  * @param {import("@minecraft/server").Entity} target
  * @param {string} effectType "slowness" | "poison" | "weakness" | "harming"
@@ -74,25 +79,53 @@ export function throwPotion(mob, target, effectType) {
   if (!isEntityValid(mob) || !isEntityValid(target)) return false;
 
   try {
+    const dim = mob.dimension;
+    const mobLoc = mob.location;
+    const targetLoc = target.location;
+
+    const spawnPos = {
+      x: mobLoc.x,
+      y: mobLoc.y + 1.2,
+      z: mobLoc.z
+    };
+
+    const dir = normalize({
+      x: targetLoc.x - spawnPos.x,
+      y: (targetLoc.y + 0.5) - spawnPos.y,
+      z: targetLoc.z - spawnPos.z
+    });
+
+    // Launch visible splash potion projectile with parabolic arc
+    try {
+      const potionEntity = dim.spawnEntity("minecraft:splash_potion", {
+        x: spawnPos.x + dir.x * 0.8,
+        y: spawnPos.y + dir.y * 0.8 + 0.2,
+        z: spawnPos.z + dir.z * 0.8
+      });
+      if (potionEntity) {
+        potionEntity.applyImpulse({
+          x: dir.x * 0.9,
+          y: dir.y * 0.9 + 0.25,
+          z: dir.z * 0.9
+        });
+      }
+    } catch {}
+
     mob.dimension.playSound("mob.witch.throw", mob.location, {
       volume: 1.0,
       pitch: 1.0
     });
 
-    // Apply exact effect according to Java Potion types:
-    // Slowness: 30s (600 ticks)
-    // Poison: 30s (600 ticks)
-    // Weakness: 60s (1200 ticks)
-    // Harming: Instant damage
+    // Apply exact Java effect and duration
     switch (effectType) {
       case "slowness":
-        target.addEffect("minecraft:slowness", 300, { amplifier: 0, showParticles: true });
+        target.addEffect("minecraft:slowness", 600, { amplifier: 0, showParticles: true });
         break;
       case "poison":
-        target.addEffect("minecraft:poison", 300, { amplifier: 0, showParticles: true });
+        target.addEffect("minecraft:poison", 600, { amplifier: 0, showParticles: true });
         break;
       case "weakness":
-        target.addEffect("minecraft:weakness", 600, { amplifier: 0, showParticles: true });
+        target.addEffect("minecraft:weakness", 1200, { amplifier: 0, showParticles: true });
         break;
       case "harming":
       default:

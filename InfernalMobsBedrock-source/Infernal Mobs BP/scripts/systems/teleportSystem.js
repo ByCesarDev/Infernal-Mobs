@@ -12,28 +12,26 @@ import { isEntityValid } from "../util/entity.js";
  * If distant (>8), try up to 5 attempts towards entity;
  * else / fallback: try up to 5 attempts randomly
  */
-export function tryTeleportWithTarget(mob, targetEnt) {
-  if (!isEntityValid(mob) || !isEntityValid(targetEnt)) return false;
+export function findTeleportDestinationWithTarget(mob, targetEnt) {
+  if (!isEntityValid(mob) || !isEntityValid(targetEnt)) return null;
 
   const dist = distance(mob.location, targetEnt.location);
   if (dist > 8) {
     for (let attempts = 0; attempts < 5; attempts++) {
-      if (tryTeleportTowardsEntity(mob, targetEnt)) {
-        return true;
-      }
+      const dest = findTeleportDestinationTowards(mob, targetEnt);
+      if (dest) return dest;
     }
   }
 
   for (let attempts = 0; attempts < 5; attempts++) {
-    if (tryTeleportRandomly(mob)) {
-      return true;
-    }
+    const dest = findTeleportDestinationRandomly(mob);
+    if (dest) return dest;
   }
 
-  return false;
+  return null;
 }
 
-export function tryTeleportTowardsEntity(mob, targetEnt) {
+export function findTeleportDestinationTowards(mob, targetEnt) {
   const mobLoc = mob.location;
   const targetLoc = targetEnt.location;
 
@@ -41,38 +39,55 @@ export function tryTeleportTowardsEntity(mob, targetEnt) {
   const dy = mobLoc.y - targetLoc.y;
   const dz = mobLoc.z - targetLoc.z;
   const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
-  if (len < 1e-4) return false;
+  if (len < 1e-4) return null;
 
   const normX = dx / len;
   const normY = dy / len;
   const normZ = dz / len;
 
-  // In Java: mob.getX() + (rnd - 0.5)*8 - normX * 16
   const targetX = mobLoc.x + (randomFloat() - 0.5) * 8.0 - normX * 16.0;
   const targetY = mobLoc.y + (randomInt(0, 16) - 8) - normY * 16.0;
   const targetZ = mobLoc.z + (randomFloat() - 0.5) * 8.0 - normZ * 16.0;
 
-  return tryTeleportTo(mob, targetX, targetY, targetZ);
+  return findSafeGround(mob.dimension, targetX, targetY, targetZ);
 }
 
-export function tryTeleportRandomly(mob) {
+export function findTeleportDestinationRandomly(mob) {
   const mobLoc = mob.location;
   const targetX = mobLoc.x + (randomFloat() - 0.5) * 64.0;
   const targetY = mobLoc.y + (randomInt(0, 64) - 32);
   const targetZ = mobLoc.z + (randomFloat() - 0.5) * 64.0;
 
-  return tryTeleportTo(mob, targetX, targetY, targetZ);
+  return findSafeGround(mob.dimension, targetX, targetY, targetZ);
 }
 
-export function tryTeleportTo(mob, x, y, z) {
-  const dim = mob.dimension;
+export function findTeleportDestinationBehind(mob, targetEnt) {
+  if (!isEntityValid(mob) || !isEntityValid(targetEnt)) return null;
+
+  const targetLoc = targetEnt.location;
+  let viewVec = { x: 0, z: 1 };
+  try {
+    const view = targetEnt.getViewDirection?.();
+    if (view && (view.x !== 0 || view.z !== 0)) {
+      const len = Math.sqrt(view.x * view.x + view.z * view.z);
+      viewVec = { x: view.x / len, z: view.z / len };
+    }
+  } catch {}
+
+  // Destination behind target by 2-3 blocks
+  const targetX = targetLoc.x - viewVec.x * 2.5;
+  const targetY = targetLoc.y;
+  const targetZ = targetLoc.z - viewVec.z * 2.5;
+
+  return findSafeGround(mob.dimension, targetX, targetY, targetZ);
+}
+
+export function findSafeGround(dim, x, y, z) {
   const blockX = Math.floor(x);
   let blockY = Math.floor(y);
   const blockZ = Math.floor(z);
 
   try {
-    // Scan down for solid ground
-    let groundFound = false;
     for (let offset = 0; offset < 16; offset++) {
       const currentY = blockY - offset;
       if (currentY < -64) break;
@@ -84,15 +99,30 @@ export function tryTeleportTo(mob, x, y, z) {
       if (floorBlock && floorBlock.isSolid && !floorBlock.isLiquid &&
           feetBlock && (feetBlock.isAir || !feetBlock.isSolid) && !feetBlock.isLiquid &&
           headBlock && (headBlock.isAir || !headBlock.isSolid) && !headBlock.isLiquid) {
-        blockY = currentY;
-        groundFound = true;
-        break;
+        return { x: blockX + 0.5, y: currentY, z: blockZ + 0.5 };
       }
     }
+  } catch {}
 
-    if (!groundFound) return false;
+  return null;
+}
 
-    mob.teleport({ x: blockX + 0.5, y: blockY, z: blockZ + 0.5 });
+export function tryTeleportWithTarget(mob, targetEnt) {
+  const dest = findTeleportDestinationWithTarget(mob, targetEnt);
+  if (!dest) return false;
+  try {
+    mob.teleport(dest);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function tryTeleportBehind(mob, targetEnt) {
+  const dest = findTeleportDestinationBehind(mob, targetEnt);
+  if (!dest) return false;
+  try {
+    mob.teleport(dest);
     return true;
   } catch {
     return false;

@@ -110,8 +110,12 @@ export function handleMakeCommand(origin, tierArg) {
     const state = createInfernal(target, selectedTier);
     if (state) {
       try {
-        target.dimension.spawnEntity("minecraft:lightning_bolt", target.location);
-        target.extinguishFire(false);
+        target.dimension.playSound("ambient.weather.thunder", target.location, { volume: 1.0, pitch: 1.2 });
+        target.dimension.spawnParticle("minecraft:electric_spark_particle", {
+          x: target.location.x,
+          y: target.location.y + 1.0,
+          z: target.location.z
+        });
       } catch {}
       player.sendMessage(`§aConverted ${target.typeId} into a §e${state.tier.toUpperCase()}§a infernal with ${state.modifiers.length} modifiers: ${state.modifiers.join(", ")}`);
     } else {

@@ -3,6 +3,7 @@
  * Centralizes incoming and outgoing combat handling with recursion guards
  */
 
+import { system } from "@minecraft/server";
 import { DAMAGE_GUARDS } from "./constants.js";
 import { getModifierHandler } from "../data/modifierDefinitions.js";
 import { getTrackedInfernal, registerInfernal } from "./infernalManager.js";
@@ -15,6 +16,10 @@ import { logDebug, logError } from "../util/log.js";
 
 /**
  * Handles incoming before-damage event (transformations, damage reduction, cancellation)
+ * Process order strictly matches Java NeoForge:
+ * 1. Victim incoming handlers (Bulwark, Ender, Ninja)
+ * 2. If not cancelled: Attacker outgoing handlers (Berserk, etc.)
+ * 3. Deferred execution for mutations (teleport, damage, sound) to avoid privilege errors
  * @param {import("@minecraft/server").EntityHurtBeforeEvent} event
  */
 export function handleBeforeHurt(event) {
@@ -33,32 +38,54 @@ export function handleBeforeHurt(event) {
   }
 
   const attacker = event.damageSource?.damagingEntity;
+  const pendingActions = [];
 
-  // 2. Outgoing Damage from an Infernal Mob (Attacker is Infernal)
-  if (attacker && isEntityValid(attacker)) {
-    const attackerState = getInfernalState(attacker);
-    if (attackerState && attackerState.isInfernal) {
-      processOutgoingBeforeHurt(event, attacker, victim, attackerState, currentTick);
+  // 2. Incoming Damage to an Infernal Mob (Victim is Infernal) - JAVA ORDER FIRST
+  const victimState = getInfernalState(victim);
+  if (victimState && victimState.isInfernal) {
+    processIncomingBeforeHurt(event, victim, attacker, victimState, currentTick, pendingActions);
+    if (event.cancel) {
+      // Defensive modifier (Ender, Ninja) negated the hit: execute deferred actions and abort attacker processing
+      if (pendingActions.length > 0) {
+        system.run(() => {
+          for (const action of pendingActions) {
+            try { action(); } catch (err) { logError("damagePipeline", "Error in pending action", err); }
+          }
+        });
+      }
+      return;
     }
   }
 
-  // 3. Incoming Damage to an Infernal Mob (Victim is Infernal)
-  const victimState = getInfernalState(victim);
-  if (victimState && victimState.isInfernal) {
-    processIncomingBeforeHurt(event, victim, attacker, victimState, currentTick);
+  // 3. Outgoing Damage from an Infernal Mob (Attacker is Infernal) - JAVA ORDER SECOND
+  if (attacker && isEntityValid(attacker)) {
+    const attackerState = getInfernalState(attacker);
+    if (attackerState && attackerState.isInfernal) {
+      processOutgoingBeforeHurt(event, attacker, victim, attackerState, currentTick, pendingActions);
+    }
+  }
+
+  // 4. Dispatch any queued mutations outside restricted execution mode
+  if (pendingActions.length > 0) {
+    system.run(() => {
+      for (const action of pendingActions) {
+        try { action(); } catch (err) { logError("damagePipeline", "Error in pending action", err); }
+      }
+    });
   }
 }
 
 /**
  * Process outgoing damage before it is applied
  */
-function processOutgoingBeforeHurt(event, attacker, victim, state, tick) {
+function processOutgoingBeforeHurt(event, attacker, victim, state, tick, pendingActions) {
   const context = {
     attacker,
     victim,
     source: event.damageSource,
     damage: event.damage,
     originalDamage: event.damage,
+    pendingActions,
     tick
   };
 
@@ -80,7 +107,7 @@ function processOutgoingBeforeHurt(event, attacker, victim, state, tick) {
 /**
  * Process incoming damage before it is applied
  */
-function processIncomingBeforeHurt(event, victim, attacker, state, tick) {
+function processIncomingBeforeHurt(event, victim, attacker, state, tick, pendingActions) {
   const context = {
     victim,
     attacker,
@@ -88,6 +115,7 @@ function processIncomingBeforeHurt(event, victim, attacker, state, tick) {
     damage: event.damage,
     originalDamage: event.damage,
     cancel: false,
+    pendingActions,
     tick
   };
 
@@ -184,6 +212,7 @@ function processIncomingAfterHurt(event, victim, attacker, state, tick) {
     attacker,
     source: event.damageSource,
     damage: event.damage,
+    record: getTrackedInfernal(victim.id),
     tick
   };
 

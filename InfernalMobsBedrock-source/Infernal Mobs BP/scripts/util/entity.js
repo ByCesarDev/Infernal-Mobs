@@ -1,6 +1,4 @@
-/**
- * Infernal Mobs Bedrock - Entity Inspection Utility
- */
+import { GameMode } from "@minecraft/server";
 
 export function isEntityValid(entity) {
   if (!entity) return false;
@@ -38,23 +36,16 @@ export function isPlayer(entity) {
 export function isCreativePlayer(entity) {
   if (!isPlayer(entity)) return false;
   try {
-    // In Bedrock scripting, creative player check can inspect canFly or tags/gamemode
-    // Player does not expose gameMode directly on stable 2.10.0, but we can check if player has tags or matches selector @s[m=creative]
-    // A robust way on stable is testing player.matches({ gameMode: GameMode.creative }) if supported or command selector
-    return entity.matches({ gameMode: 1 }); // GameMode.creative is 1 or 'creative'
+    return entity.matches({ gameMode: GameMode.Creative });
   } catch {
-    try {
-      return entity.matches({ gameMode: "creative" });
-    } catch {
-      return false;
-    }
+    return false;
   }
 }
 
 export function isSpectatorPlayer(entity) {
   if (!isPlayer(entity)) return false;
   try {
-    return entity.matches({ gameMode: "spectator" }) || entity.matches({ gameMode: 3 });
+    return entity.matches({ gameMode: GameMode.Spectator });
   } catch {
     return false;
   }
@@ -87,7 +78,7 @@ export function getSpeciesKey(entity) {
   return parts.length > 1 ? parts[1] : parts[0];
 }
 
-const KNOWN_HOSTILES = new Set([
+export const KNOWN_HOSTILES = new Set([
   "minecraft:zombie",
   "minecraft:skeleton",
   "minecraft:creeper",
@@ -119,17 +110,24 @@ const KNOWN_HOSTILES = new Set([
   "minecraft:endermite",
   "minecraft:shulker",
   "minecraft:breeze",
-  "minecraft:bogged"
+  "minecraft:bogged",
+  "minecraft:warden",
+  "minecraft:hoglin",
+  "minecraft:zoglin",
+  "minecraft:wither",
+  "minecraft:ender_dragon"
 ]);
 
 export function isHostile(entity) {
   if (!isEntityValid(entity)) return false;
+  if (isPlayer(entity)) return false;
+  if (isTamed(entity)) return false;
   if (KNOWN_HOSTILES.has(entity.typeId)) return true;
-  // If entity has target or movement and is not player/item/passive
+
+  // Support for custom addon monsters
   try {
-    if (entity.getComponent("minecraft:is_tamed")) return false;
-    return Boolean(entity.target || entity.getComponent("minecraft:behavior.nearest_attackable_target"));
-  } catch {
-    return false;
-  }
+    if (entity.target) return true;
+  } catch {}
+
+  return false;
 }

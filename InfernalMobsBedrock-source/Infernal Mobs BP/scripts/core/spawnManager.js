@@ -9,7 +9,8 @@ import { MODIFIER_METADATA } from "../data/modifierNames.js";
 import { getConfig, isModifierConfigEnabled } from "../storage/worldConfig.js";
 import { isEntityProcessed, markProcessedNonInfernal, setInfernalState } from "../storage/entityState.js";
 import { applyInfernalHealth, calculateInfernalMaxHealth } from "../systems/healthSystem.js";
-import { getSpeciesKey, isCreeper, isEntityAlive, isEntityValid, isPlayer, isSpider, isTamed, safeGetHealth } from "../util/entity.js";
+import { formatShortName } from "../systems/namingSystem.js";
+import { getSpeciesKey, isCreeper, isEntityAlive, isEntityValid, isHostile, isPlayer, isSpider, isTamed, safeGetHealth } from "../util/entity.js";
 import { pickRandom, randomInt, rollChance } from "../util/random.js";
 import { logDebug, logInfo } from "../util/log.js";
 import { registerInfernal } from "./infernalManager.js";
@@ -17,7 +18,7 @@ import { registerInfernal } from "./infernalManager.js";
 /**
  * Checks if an entity is eligible to become an infernal mob
  */
-export function isEligibleForInfernal(entity, config = null) {
+export function isEligibleForInfernal(entity, config = null, isNaturalSpawn = false) {
   if (!isEntityValid(entity) || !isEntityAlive(entity)) return false;
   if (isPlayer(entity)) return false;
 
@@ -36,8 +37,9 @@ export function isEligibleForInfernal(entity, config = null) {
   const health = safeGetHealth(entity);
   if (!health) return false;
 
-  // Entity type blacklist
   const typeId = entity.typeId;
+
+  // Entity type blacklist
   if (currentConfig.entityBlacklist && currentConfig.entityBlacklist.includes(typeId)) {
     return false;
   }
@@ -47,36 +49,51 @@ export function isEligibleForInfernal(entity, config = null) {
     if (!currentConfig.entityWhitelist.includes(typeId)) {
       return false;
     }
+  } else if (isNaturalSpawn) {
+    // Natural spawn requires hostile enemy (Java: instanceof Enemy)
+    if (!isHostile(entity)) {
+      return false;
+    }
   }
 
   return true;
 }
 
 /**
- * Rolls whether a mob becomes infernal and calculates the target modifier count
+ * Rolls whether a mob becomes infernal and calculates the target modifier count and rolled tier
  * Following Java's exact chained rolls:
- * 1. Elite: 1 / eliteRarity -> 2-4 mods
- * 2. If Elite, Ultra: 1 / ultraRarity -> + 3-4 mods (total 5-8)
- * 3. If Ultra, Infernal: 1 / infernoRarity -> + 3-4 mods (total 8-12)
+ * 1. Elite: 1 / eliteRarity -> 2-4 mods (Rare)
+ * 2. If Elite, Ultra: 1 / ultraRarity -> + 3-4 mods (total 5-8, Ultra)
+ * 3. If Ultra, Infernal: 1 / infernoRarity -> + 3-4 mods (total 8-12, Infernal)
  */
-export function rollModifierCount(config = null) {
+export function rollInfernalSpawn(config = null) {
   const currentConfig = config ?? getConfig();
 
   if (!rollChance(currentConfig.eliteRarity)) {
-    return 0; // Not infernal
+    return { count: 0, tier: null };
   }
 
   let count = 2 + randomInt(0, 2); // 2 to 4 mods base
+  let tier = TIER.RARE;
 
   if (rollChance(currentConfig.ultraRarity)) {
     count += 3 + randomInt(0, 1); // + 3 to 4 mods (total 5 to 8)
+    tier = TIER.ULTRA;
 
     if (rollChance(currentConfig.infernoRarity)) {
       count += 3 + randomInt(0, 1); // + 3 to 4 mods (total 8 to 12)
+      tier = TIER.INFERNAL;
     }
   }
 
-  return count;
+  return { count, tier };
+}
+
+/**
+ * Convenience wrapper returning just the target modifier count
+ */
+export function rollModifierCount(config = null) {
+  return rollInfernalSpawn(config).count;
 }
 
 /**
@@ -128,7 +145,7 @@ export function processEntitySpawn(entity) {
   }
 
   const config = getConfig();
-  if (!isEligibleForInfernal(entity, config)) {
+  if (!isEligibleForInfernal(entity, config, true)) {
     markProcessedNonInfernal(entity);
     return false;
   }
@@ -138,7 +155,13 @@ export function processEntitySpawn(entity) {
 
   let targetModCount = 0;
   if (isForced) {
-    targetModCount = 2 + randomInt(0, 2);
+    targetModCount = 2 + randomInt(0, 2); // Guaranteed base elite
+    if (rollChance(config.ultraRarity)) {
+      targetModCount += 3 + randomInt(0, 1);
+      if (rollChance(config.infernoRarity)) {
+        targetModCount += 3 + randomInt(0, 1);
+      }
+    }
   } else {
     targetModCount = rollModifierCount(config);
   }
@@ -234,6 +257,9 @@ export function createInfernal(entity, forcedTier = null, forcedModifiers = null
   } catch {}
 
   registerInfernal(entity, state);
+  if (config.namesEnabled && isEntityValid(entity)) {
+    entity.nameTag = formatShortName(state);
+  }
   logInfo("spawn", `Created ${tier} infernal ${entity.typeId} (${entity.id}) with ${modifiers.length} mods: ${modifiers.join(", ")}`);
 
   return state;

@@ -7,7 +7,7 @@ import { DAMAGE_GUARDS } from "../core/constants.js";
 import { registerModifierHandler } from "../data/modifierDefinitions.js";
 import { checkCooldownAndMark } from "../core/infernalManager.js";
 import { getConfig } from "../storage/worldConfig.js";
-import { tryTeleportWithTarget } from "../systems/teleportSystem.js";
+import { findTeleportDestinationWithTarget } from "../systems/teleportSystem.js";
 import { isEntityAlive, isEntityValid } from "../util/entity.js";
 import { setDamageGuard } from "../util/guards.js";
 import { logDebug } from "../util/log.js";
@@ -29,32 +29,40 @@ export const EnderHandler = {
       return;
     }
 
-    const teleported = tryTeleportWithTarget(victim, attacker);
-    if (teleported) {
-      // Cancel incoming damage
+    const destination = findTeleportDestinationWithTarget(victim, attacker);
+    if (destination) {
+      // Cancel incoming damage in beforeEvent
       context.cancel = true;
 
-      // Play teleport sound at destination
-      victim.dimension.playSound("mob.endermen.portal", victim.location, {
-        volume: 1.0,
-        pitch: 1.0
-      });
+      // Queue deferred mutations outside restricted execution mode
+      if (!context.pendingActions) context.pendingActions = [];
+      const originalDamage = context.originalDamage ?? context.damage;
 
-      // Reflect damage capped at maxDamage
-      const config = getConfig();
-      const maxDmg = config.maxDamage ?? 10.0;
-      const reflected = Math.min(context.damage, maxDmg);
-
-      if (reflected > 0) {
-        logDebug("ender", `Ender teleported, cancelling hit and reflecting ${reflected} to ${attacker.id}`);
-        setDamageGuard(attacker.id, DAMAGE_GUARDS.ENDER_REFLECT, tick);
+      context.pendingActions.push(() => {
+        if (!isEntityValid(victim) || !isEntityAlive(victim)) return;
         try {
-          attacker.applyDamage(reflected, {
-            cause: "entityAttack",
-            damagingEntity: victim
+          victim.teleport(destination);
+          victim.dimension.playSound("mob.endermen.portal", destination, {
+            volume: 1.0,
+            pitch: 1.0
           });
         } catch {}
-      }
+
+        const config = getConfig();
+        const maxDmg = config.maxDamage ?? 10.0;
+        const reflected = Math.min(originalDamage, maxDmg);
+
+        if (reflected > 0 && isEntityValid(attacker) && isEntityAlive(attacker)) {
+          logDebug("ender", `Ender deferred teleport executed, reflecting ${reflected} to ${attacker.id}`);
+          setDamageGuard(attacker.id, DAMAGE_GUARDS.ENDER_REFLECT, tick);
+          try {
+            attacker.applyDamage(reflected, {
+              cause: "entityAttack",
+              damagingEntity: victim
+            });
+          } catch {}
+        }
+      });
     }
   }
 };

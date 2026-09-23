@@ -6,10 +6,14 @@
 import { system, world } from "@minecraft/server";
 import { handleAfterHurt, handleBeforeHurt } from "./damagePipeline.js";
 import { processEntitySpawn } from "./spawnManager.js";
-import { registerInfernal, unregisterInfernal } from "./infernalManager.js";
+import { getTrackedInfernal, registerInfernal, unregisterInfernal } from "./infernalManager.js";
 import { migrateEntityIfNeeded } from "../storage/migrations.js";
 import { getInfernalState } from "../storage/entityState.js";
+import { getConfig } from "../storage/worldConfig.js";
 import { handleInfernalDeath } from "../systems/lootSystem.js";
+import { applyInfernalHealth } from "../systems/healthSystem.js";
+import { formatShortName } from "../systems/namingSystem.js";
+import { getModifierHandler } from "../data/modifierDefinitions.js";
 import { isEntityValid } from "../util/entity.js";
 
 /**
@@ -35,12 +39,34 @@ export function initializeEventRouter() {
       const state = getInfernalState(entity);
       if (state && state.isInfernal) {
         registerInfernal(entity, state);
+        // Reconcile health boost and nameTag upon loading chunk
+        applyInfernalHealth(entity, state.infernalMaxHealth, state.baseMaxHealth, false);
+        const config = getConfig();
+        if (config.namesEnabled) {
+          entity.nameTag = formatShortName(state);
+        }
       }
     });
   });
 
   // Death and Loot
   world.afterEvents.entityDie.subscribe((event) => {
+    const deadEntity = event.deadEntity;
+    if (deadEntity) {
+      const state = getInfernalState(deadEntity);
+      if (state && state.isInfernal) {
+        const record = getTrackedInfernal(deadEntity.id);
+        const modifiers = state.modifiers ?? [];
+        for (const modId of modifiers) {
+          const handler = getModifierHandler(modId);
+          if (handler && typeof handler.onDeath === "function") {
+            try {
+              handler.onDeath(deadEntity, record);
+            } catch {}
+          }
+        }
+      }
+    }
     handleInfernalDeath(event);
   });
 

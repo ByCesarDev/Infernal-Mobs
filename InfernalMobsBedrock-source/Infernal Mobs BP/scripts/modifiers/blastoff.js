@@ -18,7 +18,7 @@ function triggerBlastoff(mob, target) {
     if (hasLineOfSight(mob, target)) {
       try {
         // Vertical launch impulse
-        target.applyKnockback(0, 0, 0, 1.1);
+        target.applyKnockback({ x: 0, z: 0 }, 1.1);
 
         mob.dimension.playSound("mob.slime.jump", mob.location, {
           volume: 1.0,

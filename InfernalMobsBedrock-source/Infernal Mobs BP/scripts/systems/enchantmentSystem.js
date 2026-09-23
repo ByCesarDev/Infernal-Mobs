@@ -48,7 +48,7 @@ export function enchantRandomly(itemStack, modifierCount) {
     if (!enchantable) return;
 
     // In Java: remainStr = (modStr + 1) / 2 -> results in 1 to 3 enchantments
-    const modStr = Math.max(2, Math.min(12, modifierCount));
+    const modStr = Math.max(2, Math.min(5, modifierCount));
     const enchantmentRounds = Math.max(1, Math.min(3, Math.floor((modStr + 1) / 2)));
 
     const shuffled = [...COMMON_ENCHANTMENT_IDS].sort(() => Math.random() - 0.5);
@@ -62,10 +62,10 @@ export function enchantRandomly(itemStack, modifierCount) {
         if (!enchType) continue;
 
         const maxLevel = enchType.maxLevel ?? 1;
-        // Scale level according to mob strength: low tier 1..max(1, maxLevel-1), high tier up to maxLevel
+        // Scale level according to used strength (2-5)
         let level = 1;
         if (maxLevel > 1) {
-          const powerBonus = Math.floor(modStr / 4);
+          const powerBonus = Math.floor(modStr / 3);
           level = Math.max(1, Math.min(maxLevel, 1 + powerBonus + randomInt(0, 1)));
         }
 

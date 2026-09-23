@@ -15,27 +15,23 @@ import { isEntityAlive, isEntityValid, isPlayer, safeGetHealth } from "../util/e
  * Handles /infernalmobs:help
  */
 export function handleHelpCommand(origin) {
-  const isOp = origin.sourceEntity ? origin.sourceEntity.isOp?.() : false;
-
-  let helpText = "§6=== Infernal Mobs Commands ===§r\n" +
+  const helpText = "§6=== Infernal Mobs Commands ===§r\n" +
     "§e/infernalmobs:help§7 - Show this help menu\n" +
     "§e/infernalmobs:info§7 - Inspect the infernal mob you are looking at\n" +
     "§e/infernalmobs:modifier <id>§7 - Details on a specific modifier\n" +
-    "§e/infernalmobs:hud <on|off>§7 - Toggle your personal combat HUD";
-
-  if (isOp) {
-    helpText += "\n§c[Admin Commands]§r\n" +
-      "§e/infernalmobs:config§7 - View world configuration\n" +
-      "§e/infernalmobs:set <opt> <val>§7 - Change config value\n" +
-      "§e/infernalmobs:modifierconfig <id> <on|off>§7 - Toggle modifier\n" +
-      "§e/infernalmobs:make [tier]§7 - Convert pointed mob to infernal\n" +
-      "§e/infernalmobs:remove§7 - Remove infernal status from pointed mob\n" +
-      "§e/infernalmobs:reroll§7 - Reroll modifiers on pointed mob\n" +
-      "§e/infernalmobs:scan [radius]§7 - Scan for nearby infernals\n" +
-      "§e/infernalmobs:debug§7 - Technical debug of pointed mob\n" +
-      "§e/infernalmobs:reload§7 - Reload configuration\n" +
-      "§e/infernalmobs:resetconfig confirm§7 - Reset configuration";
-  }
+    "§e/infernalmobs:hud <on|off>§7 - Toggle your personal combat HUD\n\n" +
+    "§c[Admin Commands (Requires Operator)]§r\n" +
+    "§e/infernalmobs:config§7 - View world configuration\n" +
+    "§e/infernalmobs:set <opt> <val>§7 - Change config value\n" +
+    "§e/infernalmobs:modifierconfig <id> <on|off>§7 - Toggle modifier\n" +
+    "§e/infernalmobs:make [tier]§7 - Convert pointed mob to infernal\n" +
+    "§e/infernalmobs:setmods <mods>§7 - Set specific modifiers on pointed mob\n" +
+    "§e/infernalmobs:remove§7 - Remove infernal status from pointed mob\n" +
+    "§e/infernalmobs:reroll§7 - Reroll modifiers on pointed mob\n" +
+    "§e/infernalmobs:scan [radius]§7 - Scan for nearby infernals\n" +
+    "§e/infernalmobs:debug§7 - Technical debug of pointed mob\n" +
+    "§e/infernalmobs:reload§7 - Reload configuration\n" +
+    "§e/infernalmobs:resetconfig confirm§7 - Reset configuration";
 
   return {
     status: CustomCommandStatus.Success,

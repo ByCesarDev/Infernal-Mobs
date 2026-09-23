@@ -80,14 +80,19 @@ export function tickHudSystem(currentTick) {
     const targetData = findTargetedInfernal(player);
 
     if (targetData) {
-      // Player is actively looking at an infernal -> reset 3-second retention (60 ticks)
-      session = {
-        infernalId: targetData.entity.id,
-        infernalEntity: targetData.entity,
-        expireTick: currentTick + 60,
-        lastRenderedText: ""
-      };
-      playerHudSessions.set(player.id, session);
+      if (session && session.infernalId === targetData.entity.id) {
+        // Same target: extend expiration without wiping rendered cache
+        session.expireTick = currentTick + 60;
+      } else {
+        // New target: create new session
+        session = {
+          infernalId: targetData.entity.id,
+          infernalEntity: targetData.entity,
+          expireTick: currentTick + 60,
+          lastRenderedText: ""
+        };
+        playerHudSessions.set(player.id, session);
+      }
     }
 
     if (!session) continue;
@@ -113,6 +118,7 @@ function renderHudForPlayer(player, session) {
 
   ensureStableName(state, entity);
 
+  const config = getConfig();
   const health = safeGetHealth(entity);
   const currentHp = health ? health.currentValue : (state.infernalMaxHealth ?? 20);
   const maxHp = state.infernalMaxHealth ?? (health?.effectiveMax ?? 20);
@@ -124,10 +130,14 @@ function renderHudForPlayer(player, session) {
   const modRows = formatModifierRows(state.modifiers);
   const modifierLines = modRows.map((row) => `§7${row}`);
 
-  // Last Line: Health Bar
-  const healthBar = buildHealthBar(currentHp, maxHp, 10);
+  const lines = [fullName, ...modifierLines];
 
-  const lines = [fullName, ...modifierLines, healthBar];
+  // Optional Health Bar (respects disableHealthBar config)
+  if (!config.disableHealthBar) {
+    const healthBar = buildHealthBar(currentHp, maxHp, 10);
+    lines.push(healthBar);
+  }
+
   const combinedText = lines.join("\n");
 
   if (session.lastRenderedText !== combinedText) {
@@ -137,12 +147,15 @@ function renderHudForPlayer(player, session) {
     } catch {}
   }
 
-  // Update entity nameTag with short name if names enabled
-  const config = getConfig();
-  if (config.namesEnabled && isEntityValid(entity)) {
-    const shortName = formatShortName(state);
-    if (entity.nameTag !== shortName) {
-      entity.nameTag = shortName;
+  // Update entity nameTag with short name if names enabled, or clear if disabled
+  if (isEntityValid(entity)) {
+    if (config.namesEnabled) {
+      const shortName = formatShortName(state);
+      if (entity.nameTag !== shortName) {
+        entity.nameTag = shortName;
+      }
+    } else if (entity.nameTag) {
+      entity.nameTag = "";
     }
   }
 }

@@ -7,7 +7,7 @@ import { DAMAGE_GUARDS } from "../core/constants.js";
 import { registerModifierHandler } from "../data/modifierDefinitions.js";
 import { checkCooldownAndMark } from "../core/infernalManager.js";
 import { getConfig } from "../storage/worldConfig.js";
-import { tryTeleportWithTarget } from "../systems/teleportSystem.js";
+import { findTeleportDestinationWithTarget } from "../systems/teleportSystem.js";
 import { isEntityAlive, isEntityValid } from "../util/entity.js";
 import { setDamageGuard } from "../util/guards.js";
 import { logDebug } from "../util/log.js";
@@ -30,39 +30,45 @@ export const NinjaHandler = {
     }
 
     const startLoc = { ...victim.location };
-    const teleported = tryTeleportWithTarget(victim, attacker);
-    if (teleported) {
-      // Cancel incoming hit
+    const destination = findTeleportDestinationWithTarget(victim, attacker);
+    if (destination) {
+      // Cancel incoming hit in beforeEvent
       context.cancel = true;
 
-      // Spawn explosion sound and particles at start position (Java parity)
-      try {
-        victim.dimension.playSound("random.explode", startLoc, {
-          volume: 1.0,
-          pitch: 1.0
-        });
-        victim.dimension.spawnParticle("minecraft:basic_smoke_particle", {
-          x: startLoc.x,
-          y: startLoc.y + 1,
-          z: startLoc.z
-        });
-      } catch {}
+      // Queue deferred mutations outside restricted execution mode
+      if (!context.pendingActions) context.pendingActions = [];
+      const originalDamage = context.originalDamage ?? context.damage;
 
-      // Reflect damage capped at maxDamage
-      const config = getConfig();
-      const maxDmg = config.maxDamage ?? 10.0;
-      const reflected = Math.min(context.damage, maxDmg);
-
-      if (reflected > 0) {
-        logDebug("ninja", `Ninja teleported, cancelling hit and reflecting ${reflected} to ${attacker.id}`);
-        setDamageGuard(attacker.id, DAMAGE_GUARDS.NINJA_REFLECT, tick);
+      context.pendingActions.push(() => {
+        if (!isEntityValid(victim) || !isEntityAlive(victim)) return;
         try {
-          attacker.applyDamage(reflected, {
-            cause: "entityAttack",
-            damagingEntity: victim
+          victim.teleport(destination);
+          victim.dimension.playSound("random.explode", startLoc, {
+            volume: 1.0,
+            pitch: 1.0
+          });
+          victim.dimension.spawnParticle("minecraft:basic_smoke_particle", {
+            x: startLoc.x,
+            y: startLoc.y + 1,
+            z: startLoc.z
           });
         } catch {}
-      }
+
+        const config = getConfig();
+        const maxDmg = config.maxDamage ?? 10.0;
+        const reflected = Math.min(originalDamage, maxDmg);
+
+        if (reflected > 0 && isEntityValid(attacker) && isEntityAlive(attacker)) {
+          logDebug("ninja", `Ninja deferred teleport executed, reflecting ${reflected} to ${attacker.id}`);
+          setDamageGuard(attacker.id, DAMAGE_GUARDS.NINJA_REFLECT, tick);
+          try {
+            attacker.applyDamage(reflected, {
+              cause: "entityAttack",
+              damagingEntity: victim
+            });
+          } catch {}
+        }
+      });
     }
   }
 };

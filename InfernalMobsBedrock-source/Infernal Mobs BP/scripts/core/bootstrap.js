@@ -33,6 +33,7 @@ import "../modifiers/weakness.js";
 import "../modifiers/webber.js";
 import "../modifiers/wither.js";
 
+import { system } from "@minecraft/server";
 import { registerCustomCommands } from "../commands/registerCommands.js";
 import { initializeTestScriptEvents } from "../commands/testScriptEvents.js";
 import { initializeEventRouter } from "./eventRouter.js";
@@ -48,8 +49,10 @@ export function initializeInfernalMobs() {
   // 1. Custom commands registration (startup event)
   registerCustomCommands();
 
-  // 2. Load world configuration
-  loadWorldConfig();
+  // 2. Load world configuration (deferred to first tick to avoid early execution privilege error)
+  system.run(() => {
+    loadWorldConfig();
+  });
 
   // 3. Event listeners
   initializeEventRouter();

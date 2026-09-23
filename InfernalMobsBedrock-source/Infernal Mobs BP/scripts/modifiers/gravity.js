@@ -35,7 +35,7 @@ export const GravityHandler = {
 
     try {
       // Horizontal knockback power ~0.8, vertical <= 0.4
-      target.applyKnockback(awayVec.x, awayVec.z, 0.8, 0.4);
+      target.applyKnockback({ x: awayVec.x * 0.8, z: awayVec.z * 0.8 }, 0.4);
 
       mob.dimension.playSound("mob.irongolem.hit", mob.location, {
         volume: 1.0,

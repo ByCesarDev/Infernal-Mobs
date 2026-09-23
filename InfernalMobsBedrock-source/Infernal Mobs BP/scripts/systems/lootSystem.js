@@ -10,7 +10,7 @@ import { getInfernalState } from "../storage/entityState.js";
 import { getConfig } from "../storage/worldConfig.js";
 import { unregisterInfernal } from "../core/infernalManager.js";
 import { enchantRandomly } from "./enchantmentSystem.js";
-import { isEntityValid } from "../util/entity.js";
+import { isEntityValid, isPlayer } from "../util/entity.js";
 import { pickRandom } from "../util/random.js";
 import { logDebug, logError } from "../util/log.js";
 
@@ -39,28 +39,39 @@ export function handleInfernalDeath(event) {
   const modifiers = state.modifiers ?? [];
   const modCount = modifiers.length;
   const tier = state.tier ?? TIER.RARE;
+  const killer = event.damageSource?.damagingEntity;
+  const isKilledByPlayer = isPlayer(killer);
 
-  // 1. Drop 25 Experience points (if enabled)
+  // AntiFarm check: suppress drops if mob died to automated/environmental damage without player combat
+  if (config.antiFarm && !isKilledByPlayer) {
+    const cause = event.damageSource?.cause;
+    const environmentalCauses = ["fall", "drowning", "suffocation", "contact", "fire", "lava", "void", "magma", "stalagmite", "starvation"];
+    if (environmentalCauses.includes(cause)) {
+      logDebug("lootSystem", `AntiFarm active: suppressed infernal drops for ${entityId} (cause: ${cause})`);
+      return;
+    }
+  }
+
+  // 1. Deliver 25 Experience points directly (if enabled)
   if (config.xpEnabled) {
     try {
-      // In Bedrock, spawning xp_orb with experience value or spawning multiple orbs
-      let remainingXp = LOOT_XP_VALUE;
-      while (remainingXp > 0) {
-        const split = Math.min(remainingXp, 7);
-        remainingXp -= split;
-        dimension.spawnEntity("minecraft:xp_orb", location);
+      if (isKilledByPlayer) {
+        killer.addExperience(25);
+      } else {
+        // Fallback: spawn 5 xp orbs at death location
+        for (let i = 0; i < 5; i++) {
+          dimension.spawnEntity("minecraft:xp_orb", location);
+        }
       }
     } catch (error) {
-      logError("lootSystem", "Failed spawning XP orbs", error);
+      logError("lootSystem", "Failed delivering XP", error);
     }
   }
 
   // 2. Bonus Loot Drops (if enabled)
+  // Exact Java parity: while (modStr > 0) { usedStr = (modStr - 5 > 0) ? 5 : modStr; enchantRandomly(item, usedStr); modStr -= 5; }
   if (config.lootEnabled) {
     try {
-      // In Java: extraDrops = ceil(modCount / 5)
-      const extraDrops = Math.max(1, Math.ceil(modCount / 5));
-
       let table = LOOT_TABLE_ELITE;
       if (tier === TIER.INFERNAL) {
         table = LOOT_TABLE_INFERNAL;
@@ -68,22 +79,30 @@ export function handleInfernalDeath(event) {
         table = LOOT_TABLE_ULTRA;
       }
 
-      for (let i = 0; i < extraDrops; i++) {
-        const entry = pickRandom(table);
-        if (!entry) continue;
+      let modStr = modCount;
+      let droppedCount = 0;
 
-        try {
-          const itemStack = new ItemStack(entry.itemId, entry.amount ?? 1);
-          if (entry.enchantable) {
-            enchantRandomly(itemStack, modCount);
+      while (modStr > 0) {
+        const entry = pickRandom(table);
+        if (entry) {
+          try {
+            const itemStack = new ItemStack(entry.itemId, entry.amount ?? 1);
+            const usedStr = (modStr - 5 > 0) ? 5 : modStr;
+            if (entry.enchantable) {
+              enchantRandomly(itemStack, usedStr);
+            }
+            dimension.spawnItem(itemStack, location);
+            droppedCount++;
+          } catch (itemError) {
+            logError("lootSystem", `Failed dropping item ${entry?.itemId}`, itemError);
           }
-          dimension.spawnItem(itemStack, location);
-        } catch (itemError) {
-          logError("lootSystem", `Failed dropping item ${entry?.itemId}`, itemError);
+          modStr -= 5;
+        } else {
+          modStr--;
         }
       }
 
-      logDebug("lootSystem", `Dropped ${extraDrops} bonus items and 25 XP for ${tier} mob ${entityId}`);
+      logDebug("lootSystem", `Dropped ${droppedCount} bonus items and 25 XP for ${tier} mob ${entityId}`);
     } catch (error) {
       logError("lootSystem", "Failed dropping bonus loot", error);
     }
