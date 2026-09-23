@@ -9,6 +9,8 @@ import { getInfernalState } from "../storage/entityState.js";
 import { isPlayerHudEnabled } from "../storage/playerPreferences.js";
 import { getConfig } from "../storage/worldConfig.js";
 import { getCurrentTick } from "../core/tickScheduler.js";
+import { getAllActiveInfernals } from "../core/infernalManager.js";
+import { hasLineOfSight } from "./lineOfSight.js";
 import { isEntityAlive, isEntityValid, safeGetHealth } from "../util/entity.js";
 
 /**
@@ -39,14 +41,17 @@ export function buildHealthBar(current, max, segments = 10) {
 }
 
 /**
- * Raycasts from player's eyes to locate targeted infernal mob
+ * Locates the infernal mob targeted by the player:
+ * Pass 1: Strict view direction raycast up to 24 blocks
+ * Pass 2: Forgiving angular cone check (~1.2m radius around mob center, matching Java AABB.inflate(1.0))
  */
 function findTargetedInfernal(player) {
   if (!isEntityValid(player)) return null;
 
+  // Pass 1: Direct raycast along view direction
   try {
     const hits = player.getEntitiesFromViewDirection({
-      maxDistance: 20
+      maxDistance: 24
     });
 
     for (const hit of hits) {
@@ -61,11 +66,55 @@ function findTargetedInfernal(player) {
     }
   } catch {}
 
+  // Pass 2: Forgiving angle cone (allows looking at thin hitboxes or through foliage)
+  try {
+    const headLoc = player.getHeadLocation();
+    const viewDir = player.getViewDirection();
+    const activeRecords = getAllActiveInfernals();
+    const dimId = player.dimension.id;
+
+    let bestCandidate = null;
+    let bestDot = -1;
+
+    for (const record of activeRecords) {
+      const mob = record.entity;
+      if (!isEntityValid(mob) || !isEntityAlive(mob)) continue;
+      if (mob.dimension.id !== dimId) continue;
+
+      const mobLoc = mob.location;
+      const dx = mobLoc.x - headLoc.x;
+      const dy = (mobLoc.y + 0.9) - headLoc.y;
+      const dz = mobLoc.z - headLoc.z;
+      const distSq = dx * dx + dy * dy + dz * dz;
+
+      // Within 24 blocks (576 = 24^2) and not inside player
+      if (distSq > 576 || distSq < 0.25) continue;
+
+      const dist = Math.sqrt(distSq);
+      const dot = (viewDir.x * dx + viewDir.y * dy + viewDir.z * dz) / dist;
+
+      // Angle tolerance: ~1.2 blocks radius around mob center
+      const sinTolerance = Math.min(0.5, 1.2 / dist);
+      const minDot = Math.sqrt(1 - sinTolerance * sinTolerance);
+
+      if (dot >= minDot && dot > bestDot) {
+        if (hasLineOfSight(player, mob)) {
+          bestDot = dot;
+          bestCandidate = { entity: mob, state: record.state };
+        }
+      }
+    }
+
+    if (bestCandidate) {
+      return bestCandidate;
+    }
+  } catch {}
+
   return null;
 }
 
 /**
- * Periodic HUD tick runner (called 2-4 times per second via tickScheduler)
+ * Periodic HUD tick runner (called 4 times per second via tickScheduler)
  */
 export function tickHudSystem(currentTick) {
   const config = getConfig();
@@ -78,10 +127,11 @@ export function tickHudSystem(currentTick) {
 
     let session = playerHudSessions.get(player.id);
     const targetData = findTargetedInfernal(player);
+    const isActivelyTargeting = Boolean(targetData);
 
     if (targetData) {
       if (session && session.infernalId === targetData.entity.id) {
-        // Same target: extend expiration without wiping rendered cache
+        // Same target: extend expiration
         session.expireTick = currentTick + 60;
       } else {
         // New target: create new session
@@ -104,11 +154,11 @@ export function tickHudSystem(currentTick) {
     }
 
     // Render HUD
-    renderHudForPlayer(player, session);
+    renderHudForPlayer(player, session, isActivelyTargeting);
   }
 }
 
-function renderHudForPlayer(player, session) {
+function renderHudForPlayer(player, session, isActivelyTargeting = false) {
   const entity = session.infernalEntity;
   const state = getInfernalState(entity);
   if (!state || !state.isInfernal) {
@@ -140,7 +190,10 @@ function renderHudForPlayer(player, session) {
 
   const combinedText = lines.join("\n");
 
-  if (session.lastRenderedText !== combinedText) {
+  // In Bedrock, actionbar messages fade out after ~2-3 seconds unless renewed.
+  // When the player is actively looking at the mob, we keep it renewed every tick interval.
+  // When looking away (retention period), we only update if content/health changed.
+  if (isActivelyTargeting || session.lastRenderedText !== combinedText) {
     session.lastRenderedText = combinedText;
     try {
       player.onScreenDisplay.setActionBar(combinedText);
