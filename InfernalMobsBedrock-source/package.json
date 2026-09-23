@@ -1,0 +1,14 @@
+{
+  "name": "infernal-mobs-bedrock",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Authorized Bedrock port of AtomicStryker's Infernal Mobs",
+  "scripts": {
+    "check": "node tools/check-project.js",
+    "pack": "node tools/pack.js"
+  },
+  "devDependencies": {
+    "@minecraft/server": "2.10.0"
+  }
+}

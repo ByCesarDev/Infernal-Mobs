@@ -1,0 +1,20 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Infernal Mobs Bedrock Resources",
+    "description": "Resources for the authorized Bedrock port of Infernal Mobs",
+    "uuid": "5da7493a-8fca-4b16-a398-1840c5992625",
+    "version": [0, 1, 0],
+    "min_engine_version": [1, 26, 0]
+  },
+  "modules": [
+    {
+      "type": "resources",
+      "uuid": "70c91e97-5b4e-49df-868f-b8214f12dd4b",
+      "version": [0, 1, 0]
+    }
+  ],
+  "metadata": {
+    "authors": ["AtomicStryker", "CesarDev"]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Infernal Mobs Bedrock",
+    "description": "Authorized Bedrock port of AtomicStryker's Infernal Mobs",
+    "uuid": "e44c1b2c-2ce4-40b8-b4d5-0c10e1def8c6",
+    "version": [0, 1, 0],
+    "min_engine_version": [1, 26, 0]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "3f2f23c4-1efd-4bb7-9418-fbc508ac2916",
+      "version": [0, 1, 0]
+    },
+    {
+      "type": "script",
+      "language": "javascript",
+      "entry": "scripts/main.js",
+      "uuid": "336eb652-bc48-4e56-9e1b-cbf7b5b575de",
+      "version": [0, 1, 0]
+    }
+  ],
+  "dependencies": [
+    {
+      "module_name": "@minecraft/server",
+      "version": "2.10.0"
+    },
+    {
+      "uuid": "5da7493a-8fca-4b16-a398-1840c5992625",
+      "version": [0, 1, 0]
+    }
+  ],
+  "metadata": {
+    "authors": ["AtomicStryker", "CesarDev"],
+    "license": "Port authorized by the original rights holder"
+  }
+}
