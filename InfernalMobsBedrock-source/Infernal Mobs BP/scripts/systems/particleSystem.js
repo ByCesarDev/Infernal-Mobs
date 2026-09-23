@@ -51,36 +51,35 @@ export function tickInfernalAura(currentTick) {
 
       if (nearbyPlayers.length === 0) continue;
 
-      // Particle spawn location matching RendererBossGlow.java:
-      // x + (random - 0.5) * bbWidth
-      // y + random * bbHeight - 0.25
-      // z + (random - 0.5) * bbWidth
-      const xOffset = (Math.random() - 0.5) * 0.8;
-      const yOffset = Math.random() * 1.8 - 0.25;
-      const zOffset = (Math.random() - 0.5) * 0.8;
+      // Slightly increased density: 2 individual particles per emission (distinct positions & colors)
+      for (let i = 0; i < 2; i++) {
+        const xOffset = (Math.random() - 0.5) * 0.8;
+        const yOffset = Math.random() * 1.8 - 0.25;
+        const zOffset = (Math.random() - 0.5) * 0.8;
 
-      const particleLoc = {
-        x: mob.location.x + xOffset,
-        y: mob.location.y + yOffset,
-        z: mob.location.z + zOffset
-      };
+        const particleLoc = {
+          x: mob.location.x + xOffset,
+          y: mob.location.y + yOffset,
+          z: mob.location.z + zOffset
+        };
 
-      const color = getRandomInfernalColor();
-      const molang = new MolangVariableMap();
-      molang.setColorRGBA("variable.color", {
-        red: color.red,
-        green: color.green,
-        blue: color.blue,
-        alpha: 1.0
-      });
+        const color = getRandomInfernalColor();
+        const molang = new MolangVariableMap();
+        molang.setColorRGBA("variable.color", {
+          red: color.red,
+          green: color.green,
+          blue: color.blue,
+          alpha: 1.0
+        });
 
-      try {
-        mob.dimension.spawnParticle("infernalmobs:colored_mobspell", particleLoc, molang);
-      } catch {
         try {
-          mob.dimension.spawnParticle("minecraft:arrow_spell_emitter", particleLoc, molang);
+          mob.dimension.spawnParticle("infernalmobs:colored_mobspell", particleLoc, molang);
         } catch {
-          mob.dimension.spawnParticle("minecraft:mobspell_emitter", particleLoc, molang);
+          try {
+            mob.dimension.spawnParticle("minecraft:arrow_spell_emitter", particleLoc, molang);
+          } catch {
+            mob.dimension.spawnParticle("minecraft:mobspell_emitter", particleLoc, molang);
+          }
         }
       }
     } catch (e) {
