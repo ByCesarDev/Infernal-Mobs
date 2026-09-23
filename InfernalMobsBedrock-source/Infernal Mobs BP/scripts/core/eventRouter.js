@@ -40,7 +40,8 @@ export function initializeEventRouter() {
       if (state && state.isInfernal) {
         registerInfernal(entity, state);
         // Reconcile health boost and nameTag upon loading chunk
-        applyInfernalHealth(entity, state.infernalMaxHealth, state.baseMaxHealth, false);
+        const targetHealth = state.currentHealth ?? state.infernalMaxHealth;
+        applyInfernalHealth(entity, state.infernalMaxHealth, state.baseMaxHealth, targetHealth);
         const config = getConfig();
         if (config.namesEnabled) {
           entity.nameTag = formatShortName(state);

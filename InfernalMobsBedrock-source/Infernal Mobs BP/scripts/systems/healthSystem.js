@@ -26,7 +26,7 @@ export function calculateInfernalMaxHealth(baseMaxHealth, modifierCount, configO
  * Applies infernal health boost to entity
  * Uses minecraft:health_boost effect without particles to raise maximum health in Bedrock
  */
-export function applyInfernalHealth(entity, targetMaxHealth, baseMaxHealth, isInitialSpawn = true) {
+export function applyInfernalHealth(entity, targetMaxHealth, baseMaxHealth, desiredHealth = null) {
   if (!isEntityValid(entity)) return;
 
   const config = getConfig();
@@ -47,18 +47,34 @@ export function applyInfernalHealth(entity, targetMaxHealth, baseMaxHealth, isIn
       });
     }
 
-    // Only fully heal the entity to maximum if this is initial creation
-    if (isInitialSpawn) {
-      system.run(() => {
-        if (!isEntityValid(entity)) return;
-        const currentHealth = safeGetHealth(entity);
-        if (currentHealth) {
-          try {
-            currentHealth.setCurrentValue(currentHealth.effectiveMax);
-          } catch {}
+    const targetVal = (desiredHealth !== null && desiredHealth !== undefined)
+      ? Math.max(1, Math.min(targetMaxHealth, desiredHealth))
+      : targetMaxHealth;
+
+    // Apply the health to currentValue once effectiveMax has updated
+    system.run(() => {
+      if (!isEntityValid(entity)) return;
+      const currentHealth = safeGetHealth(entity);
+      if (currentHealth) {
+        try {
+          const finalVal = Math.min(targetVal, currentHealth.effectiveMax);
+          currentHealth.setCurrentValue(finalVal);
+        } catch (err) {
+          logError("healthSystem", "Failed setting current health value", err);
         }
-      });
-    }
+      }
+    });
+
+    // Double-check after 2 ticks to ensure Bedrock's attribute calculation has stabilized during chunk loading
+    system.runTimeout(() => {
+      if (!isEntityValid(entity)) return;
+      const currentHealth = safeGetHealth(entity);
+      if (currentHealth && currentHealth.currentValue < targetVal && currentHealth.effectiveMax >= targetVal) {
+        try {
+          currentHealth.setCurrentValue(targetVal);
+        } catch {}
+      }
+    }, 2);
   } catch (error) {
     logError("healthSystem", `Failed applying health to ${entity?.id}`, error);
   }

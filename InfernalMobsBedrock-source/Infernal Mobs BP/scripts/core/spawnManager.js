@@ -235,6 +235,7 @@ export function createInfernal(entity, forcedTier = null, forcedModifiers = null
     modifiers,
     baseMaxHealth,
     infernalMaxHealth,
+    currentHealth: infernalMaxHealth,
     tier,
     name: {
       prefixModifier: prefixMod,
@@ -250,7 +251,7 @@ export function createInfernal(entity, forcedTier = null, forcedModifiers = null
   };
 
   setInfernalState(entity, state);
-  applyInfernalHealth(entity, infernalMaxHealth, baseMaxHealth, true);
+  applyInfernalHealth(entity, infernalMaxHealth, baseMaxHealth, infernalMaxHealth);
 
   try {
     entity.extinguishFire(false);

@@ -36,6 +36,7 @@ function checkAndTrigger1UP(mob) {
 
       if (!state.persistent) state.persistent = {};
       state.persistent.oneUpConsumed = true;
+      state.currentHealth = health.effectiveMax;
       setInfernalState(mob, state);
 
       logInfo("1up", `1UP triggered on mob ${mob.id} (${mob.typeId}), restored to full health`);

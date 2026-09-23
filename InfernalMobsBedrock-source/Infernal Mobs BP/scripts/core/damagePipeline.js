@@ -7,9 +7,9 @@ import { system } from "@minecraft/server";
 import { DAMAGE_GUARDS } from "./constants.js";
 import { getModifierHandler } from "../data/modifierDefinitions.js";
 import { getTrackedInfernal, registerInfernal } from "./infernalManager.js";
-import { getInfernalState } from "../storage/entityState.js";
+import { getInfernalState, setInfernalState } from "../storage/entityState.js";
 import { getConfig } from "../storage/worldConfig.js";
-import { isEntityAlive, isEntityValid, isPlayer } from "../util/entity.js";
+import { isEntityAlive, isEntityValid, isPlayer, safeGetHealth } from "../util/entity.js";
 import { hasDamageGuard, setDamageGuard } from "../util/guards.js";
 import { getCurrentTick } from "./tickScheduler.js";
 import { logDebug, logError } from "../util/log.js";
@@ -234,6 +234,15 @@ function processIncomingAfterHurt(event, victim, attacker, state, tick) {
       } catch (error) {
         logError("damagePipeline", `Error in ${modId}.onIncomingDamageAfter`, error);
       }
+    }
+  }
+
+  // Persist updated health into entity dynamic property
+  if (isEntityValid(victim) && isEntityAlive(victim)) {
+    const health = safeGetHealth(victim);
+    if (health) {
+      state.currentHealth = health.currentValue;
+      setInfernalState(victim, state);
     }
   }
 }

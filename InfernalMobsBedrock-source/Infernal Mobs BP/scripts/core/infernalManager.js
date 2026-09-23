@@ -6,9 +6,10 @@
 import { STEADY_TARGET_TICKS_REQUIRED } from "./constants.js";
 import { getModifierHandler } from "../data/modifierDefinitions.js";
 import { resolveTarget } from "./targetResolver.js";
-import { getInfernalState, isInfernal, setPersistentCooldown } from "../storage/entityState.js";
+import { getInfernalState, isInfernal, setInfernalState, setPersistentCooldown } from "../storage/entityState.js";
 import { getConfig } from "../storage/worldConfig.js";
-import { isEntityAlive, isEntityValid, isPlayer } from "../util/entity.js";
+import { isEntityAlive, isEntityValid, isPlayer, safeGetHealth } from "../util/entity.js";
+import { applyInfernalHealth } from "../systems/healthSystem.js";
 import { getCurrentTick } from "./tickScheduler.js";
 import { logDebug, logError } from "../util/log.js";
 
@@ -159,6 +160,22 @@ export function tickActiveInfernals(currentTick) {
     // Resolve target and steady status
     const target = resolveTarget(mob, 16);
     const isSteady = updateSteadyTarget(record, target);
+
+    // Reconcile and persist health changes
+    if (currentTick % 20 === 0) {
+      const health = safeGetHealth(mob);
+      if (health) {
+        if (state.infernalMaxHealth && health.effectiveMax < state.infernalMaxHealth) {
+          applyInfernalHealth(mob, state.infernalMaxHealth, state.baseMaxHealth ?? 20, state.currentHealth ?? state.infernalMaxHealth);
+        } else {
+          const cur = health.currentValue;
+          if (Math.abs(cur - (state.currentHealth ?? 0)) >= 1) {
+            state.currentHealth = cur;
+            setInfernalState(mob, state);
+          }
+        }
+      }
+    }
 
     // Run modifier onUpdate hooks
     for (const modId of state.modifiers) {

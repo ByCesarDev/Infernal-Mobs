@@ -11,6 +11,7 @@ import { getConfig } from "../storage/worldConfig.js";
 import { getCurrentTick } from "../core/tickScheduler.js";
 import { getAllActiveInfernals } from "../core/infernalManager.js";
 import { hasLineOfSight } from "./lineOfSight.js";
+import { applyInfernalHealth } from "./healthSystem.js";
 import { isEntityAlive, isEntityValid, safeGetHealth } from "../util/entity.js";
 
 /**
@@ -170,8 +171,15 @@ function renderHudForPlayer(player, session, isActivelyTargeting = false) {
 
   const config = getConfig();
   const health = safeGetHealth(entity);
-  const currentHp = health ? health.currentValue : (state.infernalMaxHealth ?? 20);
+
+  if (health && state.infernalMaxHealth && health.effectiveMax < state.infernalMaxHealth) {
+    applyInfernalHealth(entity, state.infernalMaxHealth, state.baseMaxHealth ?? 20, state.currentHealth ?? state.infernalMaxHealth);
+  }
+
   const maxHp = state.infernalMaxHealth ?? (health?.effectiveMax ?? 20);
+  const currentHp = (health && health.effectiveMax >= maxHp)
+    ? health.currentValue
+    : (state.currentHealth ?? maxHp);
 
   // Line 1: Title & Full Name
   const fullName = formatFullName(state);
