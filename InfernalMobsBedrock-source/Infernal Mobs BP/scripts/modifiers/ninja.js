@@ -14,6 +14,14 @@ import { logDebug } from "../util/log.js";
 
 const COOLDOWN_TICKS = 300; // 15 seconds
 
+function randomizeNinjaLocation(origin) {
+  return {
+    x: origin.x + (Math.random() * 2 - 1),
+    y: origin.y + (Math.random() * 0.4 - 0.2),
+    z: origin.z + (Math.random() * 0.4 - 0.2)
+  };
+}
+
 export const NinjaHandler = {
   id: "ninja",
 
@@ -47,11 +55,13 @@ export const NinjaHandler = {
             volume: 1.0,
             pitch: 1.0
           });
-          victim.dimension.spawnParticle("minecraft:basic_smoke_particle", {
+          const originLoc = {
             x: startLoc.x,
             y: startLoc.y + 1,
             z: startLoc.z
-          });
+          };
+          victim.dimension.spawnParticle("minecraft:explosion_particle", randomizeNinjaLocation(originLoc));
+          victim.dimension.spawnParticle("minecraft:explosion_particle", randomizeNinjaLocation(originLoc));
         } catch {}
 
         const config = getConfig();

@@ -40,6 +40,7 @@ import { initializeEventRouter } from "./eventRouter.js";
 import { pruneInactiveInfernals, tickActiveInfernals } from "./infernalManager.js";
 import { registerRecurringTask, startTickScheduler } from "./tickScheduler.js";
 import { tickHudSystem } from "../systems/hudSystem.js";
+import { tickInfernalAura } from "../systems/particleSystem.js";
 import { loadWorldConfig } from "../storage/worldConfig.js";
 import { logInfo } from "../util/log.js";
 
@@ -62,6 +63,11 @@ export function initializeInfernalMobs() {
   // Modifiers update loop every tick for steady target processing and abilities
   registerRecurringTask("activeInfernals", 1, (tick) => {
     tickActiveInfernals(tick);
+  });
+
+  // Infernal aura particles every 2 ticks (100ms, Java 1:1 parity with RendererBossGlow.java)
+  registerRecurringTask("infernalAura", 2, (tick) => {
+    tickInfernalAura(tick);
   });
 
   // HUD updates 4 times per second (every 5 ticks)
