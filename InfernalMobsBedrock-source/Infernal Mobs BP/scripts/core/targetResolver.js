@@ -7,6 +7,7 @@ import { hasLineOfSight } from "../systems/lineOfSight.js";
 import { isCreativePlayer, isEntityAlive, isEntityValid, isHostile, isPlayer, isSpectatorPlayer } from "../util/entity.js";
 import { distanceSquared } from "../util/vector.js";
 import { getCurrentTick } from "./tickScheduler.js";
+import { getRememberedCombatTarget } from "./combatMemory.js";
 
 // Cache players by dimension ID per tick to avoid repeated C++ API calls
 const cachedPlayersByDim = new Map();
@@ -77,29 +78,31 @@ export function getNearestPlayerTarget(mob, maxDistance = 12) {
 
 /**
  * Resolves current attack target for the mob:
- * 1. Checks mob.target if present and valid within maxDistance
- * 2. If no target, only naturally falls back if mob is hostile (Java: instanceof Enemy)
- * 3. Falls back to nearest player within 7.5 blocks with confirmed line of sight
+ * 1. Checks remembered combat target from combat interactions (attacks and received hits)
+ * 2. If no remembered target and mob is hostile (Java: instanceof Enemy):
+ *    Falls back to nearest player within maxDistance with confirmed line of sight
+ * @param {import("@minecraft/server").Entity} mob
+ * @param {number} [maxDistance] Max engagement distance
+ * @returns {import("@minecraft/server").Entity | null}
  */
 export function resolveTarget(mob, maxDistance = 15) {
   if (!isEntityValid(mob)) return null;
 
-  let target = null;
-  try {
-    target = mob.target;
-  } catch {}
+  const currentTick = getCurrentTick();
 
-  if (target && isValidTarget(mob, target, maxDistance)) {
-    return target;
+  // 1. Check remembered combat target
+  const rememberedTarget = getRememberedCombatTarget(mob.id, currentTick);
+  if (rememberedTarget && isValidTarget(mob, rememberedTarget, maxDistance)) {
+    return rememberedTarget;
   }
 
-  // Java Parity: only hostile mobs scan for nearby players when unaggroed
+  // 2. Java Parity: only hostile mobs scan for nearby players when unaggroed
   if (!isHostile(mob)) {
     return null;
   }
 
-  // Java uses 7.5f fallback radius for unassigned attackTarget
-  const fallbackPlayer = getNearestPlayerTarget(mob, 7.5);
+  // 3. Fallback to nearest visible player within maxDistance (allowing full modifier range e.g. 12m for Alchemist/Ghastly)
+  const fallbackPlayer = getNearestPlayerTarget(mob, maxDistance);
   if (fallbackPlayer && hasLineOfSight(mob, fallbackPlayer)) {
     return fallbackPlayer;
   }

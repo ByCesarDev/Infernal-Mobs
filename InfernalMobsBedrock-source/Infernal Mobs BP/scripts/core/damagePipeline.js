@@ -12,7 +12,29 @@ import { getConfig } from "../storage/worldConfig.js";
 import { isEntityAlive, isEntityValid, isPlayer, safeGetHealth } from "../util/entity.js";
 import { hasDamageGuard, setDamageGuard } from "../util/guards.js";
 import { getCurrentTick } from "./tickScheduler.js";
+import { recordCombatInteraction } from "./combatMemory.js";
 import { logDebug, logError } from "../util/log.js";
+
+/**
+ * Resolves effective combat attacker from damage source (entity or projectile owner)
+ * @param {import("@minecraft/server").EntityDamageSource} damageSource
+ * @returns {import("@minecraft/server").Entity | null}
+ */
+function resolveCombatAttacker(damageSource) {
+  if (!damageSource) return null;
+  if (damageSource.damagingEntity && isEntityValid(damageSource.damagingEntity)) {
+    return damageSource.damagingEntity;
+  }
+  if (damageSource.damagingProjectile && isEntityValid(damageSource.damagingProjectile)) {
+    try {
+      const projComp = damageSource.damagingProjectile.getComponent("minecraft:projectile");
+      if (projComp?.owner && isEntityValid(projComp.owner)) {
+        return projComp.owner;
+      }
+    } catch {}
+  }
+  return null;
+}
 
 /**
  * Handles incoming before-damage event (transformations, damage reduction, cancellation)
@@ -46,11 +68,23 @@ export function handleBeforeHurt(event) {
     return;
   }
 
-  const attacker = event.damageSource?.damagingEntity;
+  const combatAttacker = resolveCombatAttacker(event.damageSource);
+  const attacker = combatAttacker ?? event.damageSource?.damagingEntity;
   const pendingActions = [];
 
-  // 2. Incoming Damage to an Infernal Mob (Victim is Infernal) - JAVA ORDER FIRST
+  // Track combat interactions in combat memory
   const victimState = getInfernalState(victim);
+  if (victimState && victimState.isInfernal && attacker && isEntityValid(attacker)) {
+    recordCombatInteraction(victim.id, attacker, currentTick);
+  }
+  if (attacker && isEntityValid(attacker)) {
+    const attackerState = getInfernalState(attacker);
+    if (attackerState && attackerState.isInfernal) {
+      recordCombatInteraction(attacker.id, victim, currentTick);
+    }
+  }
+
+  // 2. Incoming Damage to an Infernal Mob (Victim is Infernal) - JAVA ORDER FIRST
   if (victimState && victimState.isInfernal) {
     processIncomingBeforeHurt(event, victim, attacker, victimState, currentTick, pendingActions);
     if (event.cancel) {
@@ -170,7 +204,20 @@ export function handleAfterHurt(event) {
     return;
   }
 
-  const attacker = event.damageSource?.damagingEntity;
+  const combatAttacker = resolveCombatAttacker(event.damageSource);
+  const attacker = combatAttacker ?? event.damageSource?.damagingEntity;
+
+  // Refresh combat interactions
+  const victimState = getInfernalState(victim);
+  if (victimState && victimState.isInfernal && attacker && isEntityValid(attacker)) {
+    recordCombatInteraction(victim.id, attacker, currentTick);
+  }
+  if (attacker && isEntityValid(attacker)) {
+    const attackerState = getInfernalState(attacker);
+    if (attackerState && attackerState.isInfernal) {
+      recordCombatInteraction(attacker.id, victim, currentTick);
+    }
+  }
 
   // 1. Outgoing reactions (Attacker is Infernal)
   if (attacker && isEntityValid(attacker)) {
@@ -181,7 +228,6 @@ export function handleAfterHurt(event) {
   }
 
   // 2. Incoming reactions (Victim is Infernal)
-  const victimState = getInfernalState(victim);
   if (victimState && victimState.isInfernal) {
     processIncomingAfterHurt(event, victim, attacker, victimState, currentTick);
   }

@@ -8,15 +8,6 @@
  * 5. Health formula verification: baseMaxHealth * modifierCount * modHealthFactor
  */
 
-import { existsSync, copyFileSync } from "node:fs";
-import { resolve } from "node:path";
-
-// Ensure @minecraft/server mock is available in node_modules if needed
-const mockSrc = resolve("tools/mock-minecraft.js");
-const mockDest = resolve("node_modules/@minecraft/server/index.js");
-if (!existsSync(mockDest) && existsSync(mockSrc)) {
-  copyFileSync(mockSrc, mockDest);
-}
 
 import { DEFAULT_CONFIG } from "../Infernal Mobs BP/scripts/data/defaultConfig.js";
 import { TIER } from "../Infernal Mobs BP/scripts/core/constants.js";

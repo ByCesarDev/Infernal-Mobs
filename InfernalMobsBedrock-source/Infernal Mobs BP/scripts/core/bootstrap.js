@@ -38,9 +38,11 @@ import { registerCustomCommands } from "../commands/registerCommands.js";
 import { initializeTestScriptEvents } from "../commands/testScriptEvents.js";
 import { initializeEventRouter } from "./eventRouter.js";
 import { pruneInactiveInfernals, tickActiveInfernals } from "./infernalManager.js";
+import { pruneCombatMemory } from "./combatMemory.js";
 import { registerRecurringTask, startTickScheduler } from "./tickScheduler.js";
 import { tickHudSystem } from "../systems/hudSystem.js";
 import { tickInfernalAura } from "../systems/particleSystem.js";
+import { tickActiveProjectiles } from "../systems/projectileSystem.js";
 import { loadWorldConfig } from "../storage/worldConfig.js";
 import { logInfo } from "../util/log.js";
 
@@ -65,7 +67,12 @@ export function initializeInfernalMobs() {
     tickActiveInfernals(tick);
   });
 
-  // Infernal aura particles every 2 ticks (100ms, Java 1:1 rate with 1 individual particle)
+  // Active projectiles (Alchemist splash potions) update loop every tick
+  registerRecurringTask("activeProjectiles", 1, (tick) => {
+    tickActiveProjectiles(tick);
+  });
+
+  // Infernal aura particles every 2 ticks (100ms, enhanced density: 2 individual particles per emission)
   registerRecurringTask("infernalAura", 2, (tick) => {
     tickInfernalAura(tick);
   });
@@ -75,9 +82,10 @@ export function initializeInfernalMobs() {
     tickHudSystem(tick);
   });
 
-  // Prune dead/unloaded infernals every 100 ticks (5 seconds)
-  registerRecurringTask("cachePruning", 100, () => {
+  // Prune dead/unloaded infernals and stale combat memory every 100 ticks (5 seconds)
+  registerRecurringTask("cachePruning", 100, (tick) => {
     pruneInactiveInfernals();
+    pruneCombatMemory(tick);
   });
 
   // 5. Start main scheduler loop

@@ -27,9 +27,54 @@ function getRandomInfernalColor() {
 }
 
 /**
+ * Approximates bounding box width and height matching Java's entity.getBbWidth() & getBbHeight()
+ * Scales dynamically using getHeadLocation() with custom geometry overrides for non-humanoids
+ * @param {import("@minecraft/server").Entity} mob
+ * @returns {{ width: number, height: number }}
+ */
+function getEntityDimensions(mob) {
+  let height = 1.8;
+  let width = 0.8;
+
+  try {
+    const head = mob.getHeadLocation();
+    const rawHeight = Math.abs(head.y - mob.location.y);
+    if (rawHeight > 0.3) {
+      height = rawHeight * 1.15;
+      width = Math.min(2.5, Math.max(0.6, height * 0.45));
+    }
+  } catch {}
+
+  const type = mob.typeId;
+  if (type.includes("ghast")) {
+    width = 4.0;
+    height = 4.0;
+  } else if (type.includes("ravager")) {
+    width = 2.0;
+    height = 2.2;
+  } else if (type.includes("magma_cube") || type.includes("slime")) {
+    width = Math.max(0.8, height * 1.0);
+  } else if (type.includes("spider")) {
+    width = 1.4;
+    height = 0.9;
+  } else if (type.includes("ender_dragon")) {
+    width = 6.0;
+    height = 4.0;
+  } else if (type.includes("wither")) {
+    width = 1.2;
+    height = 3.5;
+  } else if (type.includes("iron_golem")) {
+    width = 1.4;
+    height = 2.7;
+  }
+
+  return { width, height };
+}
+
+/**
  * Ticks infernal mob particle aura (called every 2 ticks = 100ms)
- * Matches RendererBossGlow.java rate: 1 individual particle every 100ms.
- * Emits dynamic colored mobspell swirl particles using variable.color.
+ * Aesthetic enhancement over Java: emits 2 individual particles every 100ms (20/s) for vibrant Bedrock visual presence.
+ * Emits dynamic colored mobspell swirl particles using variable.color and dynamic bounding box.
  * Uses `infernalmobs:colored_mobspell` (vanilla particle sprite sheet adapter),
  * with fallbacks to `minecraft:arrow_spell_emitter` and `minecraft:mobspell_emitter`.
  * Only emits if a player is within 32 blocks (matching RendererBossGlow.java distance check).
@@ -51,11 +96,13 @@ export function tickInfernalAura(currentTick) {
 
       if (nearbyPlayers.length === 0) continue;
 
-      // Slightly increased density: 2 individual particles per emission (distinct positions & colors)
+      const { width, height } = getEntityDimensions(mob);
+
+      // Enhanced density: 2 individual particles per emission with dynamic entity dimensions
       for (let i = 0; i < 2; i++) {
-        const xOffset = (Math.random() - 0.5) * 0.8;
-        const yOffset = Math.random() * 1.8 - 0.25;
-        const zOffset = (Math.random() - 0.5) * 0.8;
+        const xOffset = (Math.random() - 0.5) * width;
+        const yOffset = Math.random() * height - 0.25;
+        const zOffset = (Math.random() - 0.5) * width;
 
         const particleLoc = {
           x: mob.location.x + xOffset,

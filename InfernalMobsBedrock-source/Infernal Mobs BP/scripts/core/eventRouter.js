@@ -15,6 +15,8 @@ import { applyInfernalHealth } from "../systems/healthSystem.js";
 import { formatShortName } from "../systems/namingSystem.js";
 import { getModifierHandler } from "../data/modifierDefinitions.js";
 import { isEntityValid } from "../util/entity.js";
+import { forgetCombatTarget, recordCombatInteraction } from "./combatMemory.js";
+import { getCurrentTick } from "./tickScheduler.js";
 
 /**
  * Initializes all world event listeners
@@ -50,10 +52,27 @@ export function initializeEventRouter() {
     });
   });
 
+  // Combat hit events (melee)
+  world.afterEvents.entityHitEntity.subscribe((event) => {
+    const { damagingEntity, hitEntity } = event;
+    if (!isEntityValid(damagingEntity) || !isEntityValid(hitEntity)) return;
+
+    const tick = getCurrentTick();
+    const attackerState = getInfernalState(damagingEntity);
+    if (attackerState && attackerState.isInfernal) {
+      recordCombatInteraction(damagingEntity.id, hitEntity, tick);
+    }
+    const victimState = getInfernalState(hitEntity);
+    if (victimState && victimState.isInfernal) {
+      recordCombatInteraction(hitEntity.id, damagingEntity, tick);
+    }
+  });
+
   // Death and Loot
   world.afterEvents.entityDie.subscribe((event) => {
     const deadEntity = event.deadEntity;
     if (deadEntity) {
+      forgetCombatTarget(deadEntity.id);
       const state = getInfernalState(deadEntity);
       if (state && state.isInfernal) {
         const record = getTrackedInfernal(deadEntity.id);
@@ -74,6 +93,7 @@ export function initializeEventRouter() {
   // Entity removal
   world.afterEvents.entityRemove.subscribe(({ removedEntityId }) => {
     if (removedEntityId) {
+      forgetCombatTarget(removedEntityId);
       unregisterInfernal(removedEntityId);
     }
   });

@@ -5,7 +5,7 @@
  */
 
 import { system, CustomCommandStatus } from "@minecraft/server";
-import { DAMAGE_GUARDS, SCHEMA_VERSION, TIER } from "../core/constants.js";
+import { SCHEMA_VERSION, TIER } from "../core/constants.js";
 import { MODIFIER_IDS, areModifiersCompatible, isModifierAllowedOnSpecies } from "../data/incompatibilities.js";
 import { clearInfernalState, getInfernalState } from "../storage/entityState.js";
 import { getConfig, loadWorldConfig, resetWorldConfig, setModifierEnabledConfig, updateConfigOption } from "../storage/worldConfig.js";
@@ -16,8 +16,6 @@ import { formatFullName, ensureStableName } from "../systems/namingSystem.js";
 import { getChokeBackendName } from "../core/capabilityDetector.js";
 import { isEntityAlive, isEntityValid, isPlayer, safeGetHealth } from "../util/entity.js";
 import { distance } from "../util/vector.js";
-import { setDamageGuard } from "../util/guards.js";
-import { getCurrentTick } from "../core/tickScheduler.js";
 
 function getPointedLivingEntity(player, maxDistance = 20) {
   if (!isPlayer(player)) return null;
@@ -112,19 +110,17 @@ export function handleMakeCommand(origin, tierArg) {
     const state = createInfernal(target, selectedTier);
     if (state) {
       try {
-        const curTick = getCurrentTick();
-        setDamageGuard(target.id, DAMAGE_GUARDS.COSMETIC_LIGHTNING, curTick);
-        if (player?.id) {
-          setDamageGuard(player.id, DAMAGE_GUARDS.COSMETIC_LIGHTNING, curTick);
+        const dim = target.dimension;
+        const loc = target.location;
+        dim.playSound("ambient.weather.thunder", loc, { volume: 1.0, pitch: 1.0 });
+        dim.playSound("random.explode", loc, { volume: 0.8, pitch: 1.2 });
+        for (let dy = 0; dy <= 4; dy += 0.5) {
+          dim.spawnParticle("minecraft:electric_spark_particle", {
+            x: loc.x + (Math.random() - 0.5) * 0.6,
+            y: loc.y + dy,
+            z: loc.z + (Math.random() - 0.5) * 0.6
+          });
         }
-        target.dimension.spawnEntity("minecraft:lightning_bolt", target.location);
-        target.extinguishFire(false);
-        system.runTimeout(() => {
-          try {
-            target.extinguishFire(false);
-            if (player?.id) player.extinguishFire(false);
-          } catch {}
-        }, 2);
       } catch {}
       player.sendMessage(`§aConverted ${target.typeId} into a §e${state.tier.toUpperCase()}§a infernal with ${state.modifiers.length} modifiers: ${state.modifiers.join(", ")}`);
     } else {
