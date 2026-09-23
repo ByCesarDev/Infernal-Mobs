@@ -43,7 +43,9 @@ export function tickInfernalAura(currentTick) {
         z: mob.location.z + zOffset
       };
 
-      mob.dimension.spawnParticle("minecraft:witchspell", particleLoc);
-    } catch {}
+      mob.dimension.spawnParticle("minecraft:witchspell_emitter", particleLoc);
+    } catch (e) {
+      // In case dimension or particle spawn fails
+    }
   }
 }
