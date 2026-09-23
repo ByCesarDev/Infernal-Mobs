@@ -29,9 +29,9 @@ function runZip(archivePath, cwd, entries) {
   // Fallback to bsdtar (built-in on Windows 10/11)
   try {
     if (cwd) {
-      execFileSync("tar", ["-a", "-c", "-f", archivePath, "*"], { cwd, shell: true });
+      execFileSync("tar", ["-a", "-c", "-f", archivePath, "*"], { cwd });
     } else {
-      execFileSync("tar", ["-a", "-c", "-f", archivePath, "-C", stage, "InfernalMobsBedrock-BP.mcpack", "InfernalMobsBedrock-RP.mcpack"], { shell: true });
+      execFileSync("tar", ["-a", "-c", "-f", archivePath, "-C", stage, "InfernalMobsBedrock-BP.mcpack", "InfernalMobsBedrock-RP.mcpack"]);
     }
     return;
   } catch (err) {
@@ -49,10 +49,6 @@ zipDirectory(join(root, rpDir), resourceArchive);
 runZip(addonArchive, null, [behaviorArchive, resourceArchive]);
 cpSync(join(root, "README.md"), join(dist, "README.md"));
 cpSync(join(root, "LICENSE-NOTICE.md"), join(dist, "LICENSE-NOTICE.md"));
-const pkgRoot = resolve(root, "..");
-if (existsSync(join(pkgRoot, "setup_symlinks.ps1"))) {
-  cpSync(addonArchive, join(pkgRoot, "InfernalMobsBedrock.mcaddon"));
-}
 console.log(addonArchive);
 
 function zipDirectory(source, target) {
