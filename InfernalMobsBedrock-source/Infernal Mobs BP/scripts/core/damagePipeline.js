@@ -28,7 +28,16 @@ export function handleBeforeHurt(event) {
 
   if (!isEntityValid(victim) || !isEntityAlive(victim)) return;
 
-  // 1. Guard against internally generated recursive damage
+  // 1. Guard against cosmetic lightning damage (/make command)
+  if (hasDamageGuard(victim.id, DAMAGE_GUARDS.COSMETIC_LIGHTNING, currentTick)) {
+    event.cancel = true;
+    try {
+      victim.extinguishFire(false);
+    } catch {}
+    return;
+  }
+
+  // Guard against internally generated recursive damage
   if (hasDamageGuard(victim.id, DAMAGE_GUARDS.REFLECT, currentTick) ||
       hasDamageGuard(victim.id, DAMAGE_GUARDS.BERSERK_SELF, currentTick) ||
       hasDamageGuard(victim.id, DAMAGE_GUARDS.CHOKE, currentTick) ||

@@ -5,7 +5,7 @@
  */
 
 import { system, CustomCommandStatus } from "@minecraft/server";
-import { SCHEMA_VERSION, TIER } from "../core/constants.js";
+import { DAMAGE_GUARDS, SCHEMA_VERSION, TIER } from "../core/constants.js";
 import { MODIFIER_IDS, areModifiersCompatible, isModifierAllowedOnSpecies } from "../data/incompatibilities.js";
 import { clearInfernalState, getInfernalState } from "../storage/entityState.js";
 import { getConfig, loadWorldConfig, resetWorldConfig, setModifierEnabledConfig, updateConfigOption } from "../storage/worldConfig.js";
@@ -16,6 +16,8 @@ import { formatFullName, ensureStableName } from "../systems/namingSystem.js";
 import { getChokeBackendName } from "../core/capabilityDetector.js";
 import { isEntityAlive, isEntityValid, isPlayer, safeGetHealth } from "../util/entity.js";
 import { distance } from "../util/vector.js";
+import { setDamageGuard } from "../util/guards.js";
+import { getCurrentTick } from "../core/tickScheduler.js";
 
 function getPointedLivingEntity(player, maxDistance = 20) {
   if (!isPlayer(player)) return null;
@@ -110,12 +112,19 @@ export function handleMakeCommand(origin, tierArg) {
     const state = createInfernal(target, selectedTier);
     if (state) {
       try {
-        target.dimension.playSound("ambient.weather.thunder", target.location, { volume: 1.0, pitch: 1.2 });
-        target.dimension.spawnParticle("minecraft:electric_spark_particle", {
-          x: target.location.x,
-          y: target.location.y + 1.0,
-          z: target.location.z
-        });
+        const curTick = getCurrentTick();
+        setDamageGuard(target.id, DAMAGE_GUARDS.COSMETIC_LIGHTNING, curTick);
+        if (player?.id) {
+          setDamageGuard(player.id, DAMAGE_GUARDS.COSMETIC_LIGHTNING, curTick);
+        }
+        target.dimension.spawnEntity("minecraft:lightning_bolt", target.location);
+        target.extinguishFire(false);
+        system.runTimeout(() => {
+          try {
+            target.extinguishFire(false);
+            if (player?.id) player.extinguishFire(false);
+          } catch {}
+        }, 2);
       } catch {}
       player.sendMessage(`§aConverted ${target.typeId} into a §e${state.tier.toUpperCase()}§a infernal with ${state.modifiers.length} modifiers: ${state.modifiers.join(", ")}`);
     } else {

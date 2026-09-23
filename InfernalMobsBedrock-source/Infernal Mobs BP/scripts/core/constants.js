@@ -71,5 +71,6 @@ export const DAMAGE_GUARDS = Object.freeze({
   CHOKE: "choke_damage",
   NINJA_REFLECT: "ninja_reflect",
   ENDER_REFLECT: "ender_reflect",
-  GHASTLY_EXPLOSION: "ghastly_explosion"
+  GHASTLY_EXPLOSION: "ghastly_explosion",
+  COSMETIC_LIGHTNING: "cosmetic_lightning"
 });
