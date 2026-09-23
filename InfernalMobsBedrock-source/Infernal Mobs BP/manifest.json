@@ -33,6 +33,8 @@
   ],
   "metadata": {
     "authors": ["AtomicStryker", "CesarDev"],
-    "license": "Port authorized by the original rights holder"
+    "license": "Port authorized by the original rights holder",
+    "product_type": "addon",
+    "product_id": "infernalmobsbedrock"
   }
 }

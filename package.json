@@ -1,0 +1,11 @@
+{
+  "name": "infernal-mobs-bedrock-root",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "npm test --prefix InfernalMobsBedrock-source",
+    "check": "npm run check --prefix InfernalMobsBedrock-source",
+    "pack": "npm run pack --prefix InfernalMobsBedrock-source",
+    "build": "npm run build --prefix InfernalMobsBedrock-source"
+  }
+}

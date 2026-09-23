@@ -6,6 +6,7 @@
   "description": "Authorized Bedrock port of AtomicStryker's Infernal Mobs",
   "scripts": {
     "check": "node tools/check-project.js",
+    "test": "node tools/test-generation.js",
     "pack": "node tools/pack.js"
   },
   "devDependencies": {
