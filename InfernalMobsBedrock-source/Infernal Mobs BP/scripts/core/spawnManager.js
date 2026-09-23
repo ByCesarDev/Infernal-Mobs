@@ -257,7 +257,8 @@ export function createInfernal(entity, forcedTier = null, forcedModifiers = null
   } catch {}
 
   registerInfernal(entity, state);
-  if (config.namesEnabled && isEntityValid(entity)) {
+  const currentConfig = getConfig();
+  if (currentConfig.namesEnabled && isEntityValid(entity)) {
     entity.nameTag = formatShortName(state);
   }
   logInfo("spawn", `Created ${tier} infernal ${entity.typeId} (${entity.id}) with ${modifiers.length} mods: ${modifiers.join(", ")}`);
