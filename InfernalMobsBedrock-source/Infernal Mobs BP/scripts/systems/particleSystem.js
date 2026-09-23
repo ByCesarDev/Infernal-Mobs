@@ -1,6 +1,6 @@
 /**
  * Infernal Mobs Bedrock - Particle System
- * Emits vibrant multicolored vanilla particles around active infernal mobs (Classic Infernal Mobs identity)
+ * Emits vibrant multicolored potion swirl particles around active infernal mobs (Classic Infernal Mobs identity)
  */
 
 import { MolangVariableMap } from "@minecraft/server";
@@ -29,7 +29,9 @@ function getRandomInfernalColor() {
 /**
  * Ticks infernal mob particle aura (called every 2 ticks = 100ms)
  * Matches RendererBossGlow.java rate: 1 individual particle every 100ms.
- * Uses vanilla `minecraft:colored_flame_particle` with dynamic MolangVariableMap coloring.
+ * Emits dynamic colored mobspell swirl particles using variable.color.
+ * Uses `infernalmobs:colored_mobspell` (vanilla particle sprite sheet adapter),
+ * with fallbacks to `minecraft:arrow_spell_emitter` and `minecraft:mobspell_emitter`.
  * Only emits if a player is within 32 blocks (matching RendererBossGlow.java distance check).
  */
 export function tickInfernalAura(currentTick) {
@@ -63,10 +65,24 @@ export function tickInfernalAura(currentTick) {
         z: mob.location.z + zOffset
       };
 
+      const color = getRandomInfernalColor();
       const molang = new MolangVariableMap();
-      molang.setColorRGB("variable.color", getRandomInfernalColor());
+      molang.setColorRGBA("variable.color", {
+        red: color.red,
+        green: color.green,
+        blue: color.blue,
+        alpha: 1.0
+      });
 
-      mob.dimension.spawnParticle("minecraft:colored_flame_particle", particleLoc, molang);
+      try {
+        mob.dimension.spawnParticle("infernalmobs:colored_mobspell", particleLoc, molang);
+      } catch {
+        try {
+          mob.dimension.spawnParticle("minecraft:arrow_spell_emitter", particleLoc, molang);
+        } catch {
+          mob.dimension.spawnParticle("minecraft:mobspell_emitter", particleLoc, molang);
+        }
+      }
     } catch (e) {
       // In case dimension or particle spawn fails
     }
