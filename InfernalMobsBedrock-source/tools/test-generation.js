@@ -14,7 +14,7 @@ import { TIER } from "../Infernal Mobs BP/scripts/core/constants.js";
 import { rollInfernalSpawn, selectModifiers, calculateVisualTier } from "../Infernal Mobs BP/scripts/core/spawnManager.js";
 import { calculateInfernalMaxHealth } from "../Infernal Mobs BP/scripts/systems/healthSystem.js";
 import { INCOMPATIBLE_MAP, SPECIES_BANNED_MODS } from "../Infernal Mobs BP/scripts/data/incompatibilities.js";
-import { formatShortName, formatFullName, formatModifierRows, ensureStableName } from "../Infernal Mobs BP/scripts/systems/namingSystem.js";
+import { formatShortName, formatFullName, formatModifierRows, ensureStableName, buildRawFullName, buildRawModifierRows, buildRawHudMessage } from "../Infernal Mobs BP/scripts/systems/namingSystem.js";
 
 console.log("Starting statistical validation with 100,000 trials...");
 
@@ -179,7 +179,30 @@ for (let r = 0; r < 50; r++) {
     throw new Error("Legacy name stability violation!");
   }
 }
-console.log("Name stability & 12-modifier row tests passed with zero violations!");
+// Test multilingual RawMessage generation
+const rawFull = buildRawFullName(testState);
+if (!rawFull.rawtext || !rawFull.rawtext.some(c => c.translate === "infernalmobs.class.infernal")) {
+  throw new Error("Raw full name missing infernal tier translation key!");
+}
+if (!rawFull.rawtext.some(c => c.translate === "infernalmobs.prefix.apathetic")) {
+  throw new Error("Raw full name missing prefix translation key!");
+}
+
+const rawRows = buildRawModifierRows(testState.modifiers);
+if (rawRows.length !== 3) {
+  throw new Error(`Expected 3 raw modifier rows, got ${rawRows.length}`);
+}
+const firstRowTranslates = rawRows[0].rawtext.filter(c => Boolean(c.translate));
+if (firstRowTranslates.length !== 5) {
+  throw new Error(`Expected 5 translation keys in first raw row, got ${firstRowTranslates.length}`);
+}
+
+const rawHud = buildRawHudMessage(testState, 100, 100, DEFAULT_CONFIG, () => "████ 100/100");
+if (!rawHud.rawtext || rawHud.rawtext.length < 5) {
+  throw new Error("Raw HUD message invalid or missing components!");
+}
+
+console.log("Name stability, multilingual RawMessage & 12-modifier row tests passed with zero violations!");
 
 if (duplicateViolations === 0 && incompatibilityViolations === 0 && creeperViolations === 0 && spiderViolations === 0 && healthFormulaViolations === 0) {
   console.log("\nALL 100,000 TESTS PASSED WITH ZERO VIOLATIONS!");

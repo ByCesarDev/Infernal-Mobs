@@ -16,5 +16,6 @@
   ],
   "metadata": {
     "authors": ["AtomicStryker", "CesarDev"]
-  }
+  },
+  "capabilities": ["pbr"]
 }

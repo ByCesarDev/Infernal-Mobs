@@ -4,7 +4,7 @@
  */
 
 import { world } from "@minecraft/server";
-import { ensureStableName, formatFullName, formatModifierRows, formatShortName } from "./namingSystem.js";
+import { buildRawHudMessage, ensureStableName, formatFullName, formatModifierRows, formatShortName } from "./namingSystem.js";
 import { getInfernalState } from "../storage/entityState.js";
 import { isPlayerHudEnabled } from "../storage/playerPreferences.js";
 import { getConfig } from "../storage/worldConfig.js";
@@ -181,30 +181,17 @@ function renderHudForPlayer(player, session, isActivelyTargeting = false) {
     ? health.currentValue
     : (state.currentHealth ?? maxHp);
 
-  // Line 1: Title & Full Name
-  const fullName = formatFullName(state);
-
-  // Lines 2+: Modifier names grouped into 5s
-  const modRows = formatModifierRows(state.modifiers);
-  const modifierLines = modRows.map((row) => `§7${row}`);
-
-  const lines = [fullName, ...modifierLines];
-
-  // Optional Health Bar (respects disableHealthBar config)
-  if (!config.disableHealthBar) {
-    const healthBar = buildHealthBar(currentHp, maxHp, 10);
-    lines.push(healthBar);
-  }
-
-  const combinedText = lines.join("\n");
+  // Build localized RawMessage (automatically translated by each player's client)
+  const rawHudMessage = buildRawHudMessage(state, currentHp, maxHp, config, buildHealthBar);
+  const jsonSignature = JSON.stringify(rawHudMessage);
 
   // In Bedrock, actionbar messages fade out after ~2-3 seconds unless renewed.
   // When the player is actively looking at the mob, we keep it renewed every tick interval.
   // When looking away (retention period), we only update if content/health changed.
-  if (isActivelyTargeting || session.lastRenderedText !== combinedText) {
-    session.lastRenderedText = combinedText;
+  if (isActivelyTargeting || session.lastRenderedText !== jsonSignature) {
+    session.lastRenderedText = jsonSignature;
     try {
-      player.onScreenDisplay.setActionBar(combinedText);
+      player.onScreenDisplay.setActionBar(rawHudMessage);
     } catch {}
   }
 

@@ -242,7 +242,8 @@ export function createInfernal(entity, forcedTier = null, forcedModifiers = null
       prefixText,
       suffixModifier: suffixMod,
       suffixText,
-      speciesKey: species
+      speciesKey: species,
+      speciesTypeId: entity.typeId
     },
     persistent: {
       oneUpConsumed: false
