@@ -2,46 +2,59 @@
 
 Copyright © 2026 CesarDev / ByCesarDev.
 
-## 1. Original project
+All rights reserved except for the permissions expressly granted in this
+license.
 
-Infernal Mobs was originally created by AtomicStryker.
+## 1. Original project and attribution
+
+The original Infernal Mobs mod was created by AtomicStryker.
 
 - Original project: <https://www.curseforge.com/minecraft/mc-mods/atomicstrykers-infernal-mobs>
 - Original source repository: <https://github.com/AtomicStryker/atomicstrykers-minecraft-mods>
 - Original custom license: <https://atomicstryker.github.io/#license--copyright>
 
-The original Infernal Mobs project, its original resources, and any material
-derived from those resources remain the intellectual property of AtomicStryker
-and are subject to the original project's custom license.
+AtomicStryker retains ownership of the original Java mod, its source code,
+compiled binaries, assets, and other original materials.
 
 ## 2. Authorization
 
-Infernal Mobs — Bedrock Edition is an authorized, independent port for
-Minecraft Bedrock Edition.
+Infernal Mobs — Bedrock Edition is an independent, unofficial, and authorized
+reimplementation for Minecraft Bedrock Edition.
 
-AtomicStryker granted CesarDev explicit written permission to create and
-publish this Bedrock Edition port and to use the original project's resources
-for this purpose.
+AtomicStryker explicitly granted CesarDev permission to create and publish the
+independent Minecraft Bedrock Edition port described in the original permission
+request.
 
 Proof of authorization:
 
 <https://i.imgur.com/skaQTMz.png>
 
-This authorization applies specifically to this project. It does not transfer
-ownership of AtomicStryker's work and does not grant third parties permission
-to extract, redistribute, relicense, or reuse the original project's resources.
+This authorization does not transfer ownership of AtomicStryker's original
+work and does not grant third parties permission to redistribute, modify, or
+relicense that original work.
 
-## 3. Bedrock Edition implementation
+## 3. Independent Bedrock implementation
 
 This project is not the original Java, Forge, or NeoForge distribution.
 
-The Bedrock Edition implementation was independently written in JavaScript,
-JSON, and other Minecraft Bedrock formats using the Minecraft Bedrock Script
-API. The original Java source code and compiled Java mod are not redistributed
-as part of this project.
+The Minecraft Bedrock Edition implementation was independently created from
+scratch by CesarDev / ByCesarDev using JavaScript, JSON, the stable Minecraft
+Bedrock Script API, and other Minecraft Bedrock formats.
 
-Copyright in the independently written Bedrock Edition implementation remains
-with CesarDev / ByCesarDev.
+The original Java source code was studied solely as a behavioral reference for
+recreating the gameplay mechanics within the technical limitations of
+Minecraft Bedrock Edition.
+
+No original Java source code, compiled binaries, textures, models, particles,
+or other assets from AtomicStryker's Java mod are included or redistributed in
+this project.
+
+All code, configuration files, particles, interface systems, commands, and
+other resources included in this Bedrock project were independently created
+for this implementation.
+
+Copyright in the independently created Bedrock Edition implementation belongs
+to CesarDev / ByCesarDev.
 
 ## 4. Permitted use
 
@@ -52,46 +65,81 @@ You may:
 - Include an unmodified copy of the add-on in a non-commercial modpack,
   provided that proper credit and a link to the official project page are
   included.
-- View the publicly available source code for educational and compatibility
-  purposes.
+- View the publicly available source code for educational, auditing, and
+  compatibility purposes.
+- Create private modifications for personal use, provided that those
+  modifications are not publicly redistributed.
 
 ## 5. Restrictions
 
 You may not:
 
 - Reupload or redistribute the add-on as a standalone download.
-- Sell the add-on or distribute it through paid or advertising-based links.
+- Sell the add-on.
+- Distribute the add-on through paid, monetized, or advertising-based download
+  links.
 - Claim the project, its implementation, or its resources as your own.
-- Remove credits, copyright notices, or attribution.
-- Extract and redistribute resources originating from AtomicStryker's project.
-- Relicense AtomicStryker's original resources.
-- Present an unofficial copy as an official release by AtomicStryker,
+- Remove copyright notices, credits, or attribution.
+- Publicly redistribute modified versions or forks without prior written
+  permission from CesarDev / ByCesarDev.
+- Use the project to impersonate an official release by AtomicStryker,
   CesarDev, Mojang Studios, or Microsoft.
+- Use this license as authorization to redistribute any material owned by
+  AtomicStryker.
 
-Any permission beyond these terms must be obtained from the corresponding
-copyright holder.
+Any permission beyond these terms must be obtained in writing from the
+corresponding copyright holder.
 
-## 6. Modifications and forks
+## 6. Modpacks and servers
 
-This license does not automatically grant permission to redistribute modified
-versions containing AtomicStryker's original resources.
+Unmodified copies of the add-on may be included in non-commercial modpacks and
+used on Minecraft servers when:
 
-Any publicly distributed modification or fork that has obtained the necessary
-permissions must:
+- The add-on is credited to CesarDev / ByCesarDev.
+- AtomicStryker is credited as the creator of the original Java mod.
+- A link to the official Bedrock project page is provided.
+- The add-on is not presented as an original creation of the modpack or server.
+- Access to the add-on itself is not sold or placed behind a paid download.
+- The add-on is not modified or redistributed separately.
+
+Commercial redistribution, paid modpacks, and redistribution through
+advertising-based links require prior written permission.
+
+## 7. Forks and public modifications
+
+This license does not grant permission to publicly distribute forks or modified
+versions of the Bedrock implementation.
+
+Permission for a public fork or modified distribution must be requested from
+CesarDev / ByCesarDev.
+
+If permission is granted, the modified project must:
 
 - Clearly state that it is unofficial.
 - Credit AtomicStryker as the creator of the original Infernal Mobs mod.
 - Credit CesarDev / ByCesarDev for the Bedrock Edition implementation.
-- Link to both the original Java project and the official Bedrock port.
-- Comply with AtomicStryker's custom license.
-- Exclude any third-party resource for which redistribution permission has not
-  been granted.
+- Link to the original Java mod and the official Bedrock port.
+- Clearly describe the modifications made.
+- Avoid implying endorsement by AtomicStryker or CesarDev.
+- Comply with any additional conditions established in the written permission.
 
-## 7. Disclaimer
+## 8. No sublicensing of third-party works
+
+Nothing in this license grants rights over Minecraft, AtomicStryker's original
+Java mod, or any other third-party work.
+
+Any third-party names, trademarks, code, or assets remain subject to the rights
+and licenses of their respective owners.
+
+## 9. Disclaimer
 
 This project is provided “as is”, without warranty of any kind, express or
-implied. The authors and copyright holders shall not be liable for damages
-arising from its use.
+implied, including warranties of merchantability, fitness for a particular
+purpose, and non-infringement.
+
+The authors and copyright holders shall not be liable for any claim, damages,
+or other liability arising from the use, distribution, or inability to use
+this project.
 
 Minecraft is a trademark of Microsoft Corporation. This project is not
 affiliated with, endorsed by, or sponsored by Mojang Studios or Microsoft.
