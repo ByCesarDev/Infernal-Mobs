@@ -14,7 +14,7 @@ import { TIER } from "../Infernal Mobs BP/scripts/core/constants.js";
 import { rollInfernalSpawn, selectModifiers, calculateVisualTier } from "../Infernal Mobs BP/scripts/core/spawnManager.js";
 import { calculateInfernalMaxHealth } from "../Infernal Mobs BP/scripts/systems/healthSystem.js";
 import { INCOMPATIBLE_MAP, SPECIES_BANNED_MODS } from "../Infernal Mobs BP/scripts/data/incompatibilities.js";
-import { formatShortName, formatFullName, formatModifierRows, ensureStableName, buildRawFullName, buildRawModifierRows, buildRawHudMessage, formatSpeciesName } from "../Infernal Mobs BP/scripts/systems/namingSystem.js";
+import { formatShortName, formatFullName, formatModifierRows, ensureStableName, buildRawFullName, buildRawModifierRows, buildRawHudMessage, formatSpeciesName, formatTitleCase } from "../Infernal Mobs BP/scripts/systems/namingSystem.js";
 
 console.log("Starting statistical validation with 100,000 trials...");
 
@@ -145,9 +145,12 @@ for (let r = 0; r < 100; r++) {
   }
 }
 
-// Verify shortName prefix matches fullName prefix
-if (!full1.includes("apathetic") || !short1.includes("apathetic")) {
+// Verify shortName prefix matches fullName prefix (Title Case)
+if (!full1.includes("Apathetic") || !short1.includes("Apathetic")) {
   throw new Error("Prefix mismatch violation!");
+}
+if (!full1.includes("The Slow")) {
+  throw new Error(`Expected 'The Slow' in fullName, got: ${full1}`);
 }
 
 // Verify 12 modifiers formatting in rows of 5
@@ -228,6 +231,34 @@ if (!multiShort.includes("Redstone Cube") || multiShort.includes("Redstone_cube"
 const multiFull = formatFullName(multiWordTestState);
 if (!multiFull.includes("Redstone Cube") || multiFull.includes("Redstone_cube")) {
   throw new Error(`Expected 'Redstone Cube' in formatFullName, got: ${multiFull}`);
+}
+
+// Test formatTitleCase on various formats
+if (formatTitleCase("stinging") !== "Stinging") {
+  throw new Error(`formatTitleCase failed on 'stinging': got ${formatTitleCase("stinging")}`);
+}
+if (formatTitleCase("totally zen") !== "Totally Zen") {
+  throw new Error(`formatTitleCase failed on 'totally zen': got ${formatTitleCase("totally zen")}`);
+}
+if (formatTitleCase("ofRecurrence") !== "Of Recurrence") {
+  throw new Error(`formatTitleCase failed on 'ofRecurrence': got ${formatTitleCase("ofRecurrence")}`);
+}
+if (formatTitleCase("yoink") !== "Yoink") {
+  throw new Error(`formatTitleCase failed on 'yoink': got ${formatTitleCase("yoink")}`);
+}
+
+// Test user screenshot case: Infernal stinging Cave Spider -> Infernal Stinging Cave Spider
+const spiderState = {
+  tier: "infernal",
+  modifiers: ["poisonous"],
+  name: {
+    prefixText: "stinging",
+    speciesKey: "cave_spider"
+  }
+};
+const spiderShort = formatShortName(spiderState);
+if (!spiderShort.includes("Stinging Cave Spider") || spiderShort.includes("stinging")) {
+  throw new Error(`Expected 'Stinging Cave Spider' in formatShortName, got: ${spiderShort}`);
 }
 
 console.log("Name stability, multilingual RawMessage, Title Case multi-word names & 12-modifier row tests passed with zero violations!");

@@ -9,7 +9,7 @@ import { MODIFIER_METADATA } from "../data/modifierNames.js";
 import { getConfig, isModifierConfigEnabled } from "../storage/worldConfig.js";
 import { isEntityProcessed, markProcessedNonInfernal, setInfernalState } from "../storage/entityState.js";
 import { applyInfernalHealth, calculateInfernalMaxHealth } from "../systems/healthSystem.js";
-import { formatShortName } from "../systems/namingSystem.js";
+import { formatShortName, formatTitleCase } from "../systems/namingSystem.js";
 import { getSpeciesKey, isCreeper, isEntityAlive, isEntityValid, isHostile, isPlayer, isSpider, isTamed, safeGetHealth } from "../util/entity.js";
 import { pickRandom, randomInt, rollChance } from "../util/random.js";
 import { logDebug, logInfo } from "../util/log.js";
@@ -213,9 +213,10 @@ export function createInfernal(entity, forcedTier = null, forcedModifiers = null
   const prefixIndex = randomInt(0, modifiers.length - 1);
   const prefixMod = modifiers[prefixIndex];
   const prefixMeta = MODIFIER_METADATA[prefixMod];
-  const prefixText = (prefixMeta && prefixMeta.prefixes && prefixMeta.prefixes.length > 0)
+  const rawPrefix = (prefixMeta && prefixMeta.prefixes && prefixMeta.prefixes.length > 0)
     ? pickRandom(prefixMeta.prefixes)
     : prefixMod;
+  const prefixText = formatTitleCase(rawPrefix);
 
   let suffixMod = null;
   let suffixText = "";
@@ -223,9 +224,10 @@ export function createInfernal(entity, forcedTier = null, forcedModifiers = null
     const suffixIndex = (prefixIndex + 1) % modifiers.length;
     suffixMod = modifiers[suffixIndex];
     const suffixMeta = MODIFIER_METADATA[suffixMod];
-    suffixText = (suffixMeta && suffixMeta.suffixes && suffixMeta.suffixes.length > 0)
+    const rawSuffix = (suffixMeta && suffixMeta.suffixes && suffixMeta.suffixes.length > 0)
       ? pickRandom(suffixMeta.suffixes)
       : "";
+    suffixText = formatTitleCase(rawSuffix);
   }
 
   const state = {

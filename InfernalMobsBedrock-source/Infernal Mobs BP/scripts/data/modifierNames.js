@@ -6,170 +6,170 @@
 export const MODIFIER_METADATA = Object.freeze({
   "1up": {
     displayName: "1UP",
-    prefixes: ["recurring", "undying", "twinlived"],
-    suffixes: ["ofRecurrence", "theUndying", "oftwinLives"],
+    prefixes: ["Recurring", "Undying", "Twinlived"],
+    suffixes: ["Of Recurrence", "The Undying", "Of Twin Lives"],
     description: "Cures the mob completely once when health falls below 25%."
   },
   "alchemist": {
     displayName: "Alchemist",
-    prefixes: ["witchkin", "brewing", "singed"],
-    suffixes: ["theWitchkin", "theBrewmaster", "theSinged"],
+    prefixes: ["Witchkin", "Brewing", "Singed"],
+    suffixes: ["The Witchkin", "The Brewmaster", "The Singed"],
     description: "Throws splash potions (Slowness, Poison, Weakness, Harming) at targets."
   },
   "berserk": {
     displayName: "Berserk",
-    prefixes: ["reckless", "raging", "smashing"],
-    suffixes: ["ofRecklessness", "theRaging", "ofSmashing"],
+    prefixes: ["Reckless", "Raging", "Smashing"],
+    suffixes: ["Of Recklessness", "The Raging", "Of Smashing"],
     description: "Deals double outgoing attack damage (max 10) but damages itself on hit."
   },
   "blastoff": {
     displayName: "Blastoff",
-    prefixes: ["thumping", "trolling", "byebye"],
-    suffixes: ["ofMissionControl", "theNASA", "ofWEE"],
+    prefixes: ["Thumping", "Trolling", "Byebye"],
+    suffixes: ["Of Mission Control", "The NASA", "Of WEE"],
     description: "Launches the target high into the air."
   },
   "bulwark": {
     displayName: "Bulwark",
-    prefixes: ["turtling", "defensive", "armoured"],
-    suffixes: ["ofTurtling", "theDefender", "ofeffingArmor"],
+    prefixes: ["Turtling", "Defensive", "Armoured"],
+    suffixes: ["Of Turtling", "The Defender", "Of Effing Armor"],
     description: "Halves all incoming damage (minimum 1)."
   },
   "choke": {
     displayName: "Choke",
     prefixes: ["Sith Lord", "Dark Lord", "Darth"],
-    suffixes: ["ofBreathlessness", "theAnaerobic", "ofDeprivation"],
+    suffixes: ["Of Breathlessness", "The Anaerobic", "Of Deprivation"],
     description: "Drains target oxygen; deals 2 drowning damage when exhausted. Hitting the mob recovers air."
   },
   "cloaking": {
     displayName: "Cloaking",
-    prefixes: ["stalking", "unseen", "hunting"],
-    suffixes: ["ofStalking", "theUnseen", "thePredator"],
+    prefixes: ["Stalking", "Unseen", "Hunting"],
+    suffixes: ["Of Stalking", "The Unseen", "The Predator"],
     description: "Grants 10 seconds of invisibility on target acquisition or being hit."
   },
   "darkness": {
     displayName: "Darkness",
-    prefixes: ["dark", "shadowkin", "eclipsed"],
-    suffixes: ["ofDarkness", "theShadow"],
+    prefixes: ["Dark", "Shadowkin", "Eclipsed"],
+    suffixes: ["Of Darkness", "The Shadow"],
     description: "Applies Blindness for 6 seconds on incoming or outgoing contact."
   },
   "ender": {
     displayName: "Ender",
-    prefixes: ["enderborn", "tricky"],
-    suffixes: ["theEnderborn", "theTrickster"],
+    prefixes: ["Enderborn", "Tricky"],
+    suffixes: ["The Enderborn", "The Trickster"],
     description: "Chance to teleport on incoming damage, negating the hit and reflecting damage."
   },
   "exhaust": {
     displayName: "Exhaust",
-    prefixes: ["exhausting", "draining"],
-    suffixes: ["ofExhaustion", "theDrainer"],
+    prefixes: ["Exhausting", "Draining"],
+    suffixes: ["Of Exhaustion", "The Drainer"],
     description: "Adds 1 food exhaustion point to players on contact."
   },
   "fiery": {
     displayName: "Fiery",
-    prefixes: ["burning", "toasting"],
-    suffixes: ["ofFieryWrath", "theSmoldering"],
+    prefixes: ["Burning", "Toasting"],
+    suffixes: ["Of Fiery Wrath", "The Smoldering"],
     description: "Sets target on fire for 3s on contact; extinguishes its own fire when struck."
   },
   "ghastly": {
     displayName: "Ghastly",
-    prefixes: ["bombing", "fireballsy"],
-    suffixes: ["ofFireballs", "theFirebreather"],
+    prefixes: ["Bombing", "Fireballsy"],
+    suffixes: ["Of Fireballs", "The Firebreather"],
     description: "Fires explosive fireballs at targets from distance."
   },
   "gravity": {
     displayName: "Gravity",
-    prefixes: ["repulsing", "sproing"],
-    suffixes: ["ofRepulsion", "theFlipper"],
+    prefixes: ["Repulsing", "Sproing"],
+    suffixes: ["Of Repulsion", "The Flipper"],
     description: "Pushes the player away horizontally every 5 seconds."
   },
   "lifesteal": {
     displayName: "LifeSteal",
-    prefixes: ["vampiric", "transfusing", "bloodsucking"],
-    suffixes: ["theVampire", "ofTransfusion", "ofLifeSteal"],
+    prefixes: ["Vampiric", "Transfusing", "Bloodsucking"],
+    suffixes: ["The Vampire", "Of Transfusion", "Of LifeSteal"],
     description: "Heals itself equal to the attack damage it deals."
   },
   "ninja": {
     displayName: "Ninja",
-    prefixes: ["totallyzen", "innerlypeaceful", "Ronin"],
-    suffixes: ["theZenMaster", "ofEquilibrium", "ofInnerPeace"],
+    prefixes: ["Totally Zen", "Innerly Peaceful", "Ronin"],
+    suffixes: ["The Zen Master", "Of Equilibrium", "Of Inner Peace"],
     description: "Teleports away with an explosion on hit, negating damage and reflecting it."
   },
   "poisonous": {
     displayName: "Poisonous",
-    prefixes: ["poisonous", "stinging", "despoiling"],
-    suffixes: ["ofPoison", "theBane", "theVenomous"],
+    prefixes: ["Poisonous", "Stinging", "Despoiling"],
+    suffixes: ["Of Poison", "The Bane", "The Venomous"],
     description: "Applies Poison for 6 seconds on incoming or outgoing contact."
   },
   "quicksand": {
     displayName: "Quicksand",
-    prefixes: ["slowing", "Quicksand"],
-    suffixes: ["ofSoothe", "theSlow"],
+    prefixes: ["Slowing", "Quicksand"],
+    suffixes: ["Of Soothe", "The Slow"],
     description: "Applies Slowness I for 45 ticks every 50 ticks to visible target."
   },
   "regen": {
     displayName: "Regen",
-    prefixes: ["regenerating", "healing", "nighunkillable"],
-    suffixes: ["ofRegeneration", "theTough", "thePhoenix"],
+    prefixes: ["Regenerating", "Healing", "Nigh Unkillable"],
+    suffixes: ["Of Regeneration", "The Tough", "The Phoenix"],
     description: "Heals 1 HP per second when not at full health or burning."
   },
   "rust": {
     displayName: "Rust",
-    prefixes: ["rusting", "decaying"],
-    suffixes: ["ofDecay", "theEquipmentHaunter"],
+    prefixes: ["Rusting", "Decaying"],
+    suffixes: ["Of Decay", "The Equipment Haunter"],
     description: "Damages player weapon by 4 on hit; damages player armor when attacking."
   },
   "sapper": {
     displayName: "Sapper",
-    prefixes: ["hungering", "starving"],
-    suffixes: ["ofHunger", "theStarving"],
+    prefixes: ["Hungering", "Starving"],
+    suffixes: ["Of Hunger", "The Starving"],
     description: "Applies Hunger for 6 seconds on contact."
   },
   "sprint": {
     displayName: "Sprint",
-    prefixes: ["sprinting", "swift", "charging"],
-    suffixes: ["ofSpeed", "theFast"],
+    prefixes: ["Sprinting", "Swift", "Charging"],
+    suffixes: ["Of Speed", "The Fast"],
     description: "Gains bursts of sprinting speed towards its target every 5 seconds."
   },
   "sticky": {
     displayName: "Sticky",
-    prefixes: ["thieving", "snagging", "quickfingered"],
-    suffixes: ["ofSnagging", "theQuickFingered", "ofPettyTheft", "yoink"],
+    prefixes: ["Thieving", "Snagging", "Quick Fingered"],
+    suffixes: ["Of Snagging", "The Quick Fingered", "Of Petty Theft", "Yoink"],
     description: "Knocks the held item out of the player's hand onto the ground."
   },
   "storm": {
     displayName: "Storm",
-    prefixes: ["striking", "thundering", "electrified"],
-    suffixes: ["ofLightning", "theRaiden"],
+    prefixes: ["Striking", "Thundering", "Electrified"],
+    suffixes: ["Of Lightning", "The Raiden"],
     description: "Summons real lightning bolts onto sky-exposed targets."
   },
   "unyielding": {
     displayName: "Unyielding",
-    prefixes: ["relentless", "unyielding", "unstoppable"],
-    suffixes: ["theImmovable", "theUnstoppable", "theMountain"],
+    prefixes: ["Relentless", "Unyielding", "Unstoppable"],
+    suffixes: ["The Immovable", "The Unstoppable", "The Mountain"],
     description: "Immune to hostile knockback."
   },
   "vengeance": {
     displayName: "Vengeance",
-    prefixes: ["thorned", "thorny", "spiky"],
-    suffixes: ["ofRetribution", "theVengeful", "theSpiky"],
+    prefixes: ["Thorned", "Thorny", "Spiky"],
+    suffixes: ["Of Retribution", "The Vengeful", "The Spiky"],
     description: "Reflects half of incoming damage back to attacker (capped at 10)."
   },
   "weakness": {
     displayName: "Weakness",
-    prefixes: ["apathetic", "deceiving"],
-    suffixes: ["ofEnfeeblement", "theDeceiver"],
+    prefixes: ["Apathetic", "Deceiving"],
+    suffixes: ["Of Enfeeblement", "The Deceiver"],
     description: "Applies Weakness for 6 seconds on incoming or outgoing contact."
   },
   "webber": {
     displayName: "Webber",
-    prefixes: ["ensnaring", "webbing"],
-    suffixes: ["ofTraps", "theMutated", "theSpider"],
+    prefixes: ["Ensnaring", "Webbing"],
+    suffixes: ["Of Traps", "The Mutated", "The Spider"],
     description: "Spawns permanent cobweb at target feet every 15 seconds."
   },
   "wither": {
     displayName: "Wither",
-    prefixes: ["withering"],
-    suffixes: ["ofWithering", "theWithered"],
+    prefixes: ["Withering"],
+    suffixes: ["Of Withering", "The Withered"],
     description: "Applies Wither for 6 seconds on incoming or outgoing contact."
   }
 });

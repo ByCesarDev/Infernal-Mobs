@@ -18,6 +18,28 @@ export function capitalize(str) {
 }
 
 /**
+ * Capitalizes the first letter of each word in a string (Title Case).
+ * Supports spaces, underscores, and camelCase boundaries.
+ * Examples:
+ *   "stinging" -> "Stinging"
+ *   "cave_spider" -> "Cave Spider"
+ *   "totally zen" -> "Totally Zen"
+ *   "ofRecurrence" -> "Of Recurrence"
+ *   "yoink" -> "Yoink"
+ * @param {string} str
+ * @returns {string}
+ */
+export function formatTitleCase(str) {
+  if (!str) return "";
+  return str
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .split(/[\s_]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+/**
  * Formats a species identifier into Title Case, replacing underscores with spaces.
  * Example: "redstone_cube" -> "Redstone Cube"
  * Example: "cave_spider" -> "Cave Spider"
@@ -27,11 +49,7 @@ export function capitalize(str) {
  */
 export function formatSpeciesName(speciesKey) {
   if (!speciesKey) return "Mob";
-  return speciesKey
-    .split(/[_\s]+/)
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  return formatTitleCase(speciesKey);
 }
 
 /**
@@ -64,9 +82,10 @@ export function ensureStableName(state, entity = null) {
 
     if (state.name.prefixModifier) {
       const prefixMeta = MODIFIER_METADATA[state.name.prefixModifier];
-      state.name.prefixText = (prefixMeta && prefixMeta.prefixes && prefixMeta.prefixes.length > 0)
+      const rawPrefix = (prefixMeta && prefixMeta.prefixes && prefixMeta.prefixes.length > 0)
         ? pickRandom(prefixMeta.prefixes)
         : state.name.prefixModifier;
+      state.name.prefixText = formatTitleCase(rawPrefix);
       modified = true;
     }
   }
@@ -80,9 +99,10 @@ export function ensureStableName(state, entity = null) {
 
     if (state.name.suffixModifier) {
       const suffixMeta = MODIFIER_METADATA[state.name.suffixModifier];
-      state.name.suffixText = (suffixMeta && suffixMeta.suffixes && suffixMeta.suffixes.length > 0)
+      const rawSuffix = (suffixMeta && suffixMeta.suffixes && suffixMeta.suffixes.length > 0)
         ? pickRandom(suffixMeta.suffixes)
         : "";
+      state.name.suffixText = formatTitleCase(rawSuffix);
       modified = true;
     }
   }
@@ -258,7 +278,8 @@ export function buildRawHudMessage(state, currentHp, maxHp, config, buildHealthB
 export function formatShortName(state) {
   if (!state) return "";
   const style = TIER_STYLE[state.tier] ?? TIER_STYLE.rare;
-  const prefix = state.name?.prefixText || (state.name?.prefixModifier ? capitalize(state.name.prefixModifier) : "");
+  const rawPrefix = state.name?.prefixText || (state.name?.prefixModifier ? capitalize(state.name.prefixModifier) : "");
+  const prefix = formatTitleCase(rawPrefix);
   const species = formatSpeciesName(state.name?.speciesKey ?? "Mob");
 
   return `${style.color}${style.label} ${prefix} ${species}`.trim();
@@ -272,12 +293,13 @@ export function formatShortName(state) {
 export function formatFullName(state) {
   if (!state) return "";
   const style = TIER_STYLE[state.tier] ?? TIER_STYLE.rare;
-  const prefix = state.name?.prefixText || (state.name?.prefixModifier ? capitalize(state.name.prefixModifier) : "");
+  const rawPrefix = state.name?.prefixText || (state.name?.prefixModifier ? capitalize(state.name.prefixModifier) : "");
+  const prefix = formatTitleCase(rawPrefix);
   const species = formatSpeciesName(state.name?.speciesKey ?? "Mob");
 
   let suffix = "";
   if (state.modifiers && state.modifiers.length > 1 && state.name?.suffixText) {
-    suffix = state.name.suffixText;
+    suffix = formatTitleCase(state.name.suffixText);
   }
 
   const parts = [`${style.color}${style.label}`, prefix, species, suffix].filter(Boolean);
