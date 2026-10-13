@@ -18,6 +18,23 @@ export function capitalize(str) {
 }
 
 /**
+ * Formats a species identifier into Title Case, replacing underscores with spaces.
+ * Example: "redstone_cube" -> "Redstone Cube"
+ * Example: "cave_spider" -> "Cave Spider"
+ * Example: "zombie" -> "Zombie"
+ * @param {string} speciesKey
+ * @returns {string}
+ */
+export function formatSpeciesName(speciesKey) {
+  if (!speciesKey) return "Mob";
+  return speciesKey
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+/**
  * Ensures state has pre-selected, stable prefixText and suffixText.
  * Generates them once and persists them back to the entity if missing.
  */
@@ -242,7 +259,7 @@ export function formatShortName(state) {
   if (!state) return "";
   const style = TIER_STYLE[state.tier] ?? TIER_STYLE.rare;
   const prefix = state.name?.prefixText || (state.name?.prefixModifier ? capitalize(state.name.prefixModifier) : "");
-  const species = capitalize(state.name?.speciesKey ?? "Mob");
+  const species = formatSpeciesName(state.name?.speciesKey ?? "Mob");
 
   return `${style.color}${style.label} ${prefix} ${species}`.trim();
 }
@@ -256,7 +273,7 @@ export function formatFullName(state) {
   if (!state) return "";
   const style = TIER_STYLE[state.tier] ?? TIER_STYLE.rare;
   const prefix = state.name?.prefixText || (state.name?.prefixModifier ? capitalize(state.name.prefixModifier) : "");
-  const species = capitalize(state.name?.speciesKey ?? "Mob");
+  const species = formatSpeciesName(state.name?.speciesKey ?? "Mob");
 
   let suffix = "";
   if (state.modifiers && state.modifiers.length > 1 && state.name?.suffixText) {

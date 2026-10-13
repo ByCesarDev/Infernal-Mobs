@@ -14,7 +14,7 @@ import { TIER } from "../Infernal Mobs BP/scripts/core/constants.js";
 import { rollInfernalSpawn, selectModifiers, calculateVisualTier } from "../Infernal Mobs BP/scripts/core/spawnManager.js";
 import { calculateInfernalMaxHealth } from "../Infernal Mobs BP/scripts/systems/healthSystem.js";
 import { INCOMPATIBLE_MAP, SPECIES_BANNED_MODS } from "../Infernal Mobs BP/scripts/data/incompatibilities.js";
-import { formatShortName, formatFullName, formatModifierRows, ensureStableName, buildRawFullName, buildRawModifierRows, buildRawHudMessage } from "../Infernal Mobs BP/scripts/systems/namingSystem.js";
+import { formatShortName, formatFullName, formatModifierRows, ensureStableName, buildRawFullName, buildRawModifierRows, buildRawHudMessage, formatSpeciesName } from "../Infernal Mobs BP/scripts/systems/namingSystem.js";
 
 console.log("Starting statistical validation with 100,000 trials...");
 
@@ -202,7 +202,35 @@ if (!rawHud.rawtext || rawHud.rawtext.length < 5) {
   throw new Error("Raw HUD message invalid or missing components!");
 }
 
-console.log("Name stability, multilingual RawMessage & 12-modifier row tests passed with zero violations!");
+// Test multi-word species formatting (e.g. redstone_cube, cave_spider, magma_cube)
+if (formatSpeciesName("redstone_cube") !== "Redstone Cube") {
+  throw new Error(`formatSpeciesName failed on redstone_cube: got ${formatSpeciesName("redstone_cube")}`);
+}
+if (formatSpeciesName("cave_spider") !== "Cave Spider") {
+  throw new Error(`formatSpeciesName failed on cave_spider: got ${formatSpeciesName("cave_spider")}`);
+}
+if (formatSpeciesName("magma_cube") !== "Magma Cube") {
+  throw new Error(`formatSpeciesName failed on magma_cube: got ${formatSpeciesName("magma_cube")}`);
+}
+
+const multiWordTestState = {
+  tier: "rare",
+  modifiers: ["webber"],
+  name: {
+    prefixText: "Webber",
+    speciesKey: "redstone_cube"
+  }
+};
+const multiShort = formatShortName(multiWordTestState);
+if (!multiShort.includes("Redstone Cube") || multiShort.includes("Redstone_cube")) {
+  throw new Error(`Expected 'Redstone Cube' in formatShortName, got: ${multiShort}`);
+}
+const multiFull = formatFullName(multiWordTestState);
+if (!multiFull.includes("Redstone Cube") || multiFull.includes("Redstone_cube")) {
+  throw new Error(`Expected 'Redstone Cube' in formatFullName, got: ${multiFull}`);
+}
+
+console.log("Name stability, multilingual RawMessage, Title Case multi-word names & 12-modifier row tests passed with zero violations!");
 
 if (duplicateViolations === 0 && incompatibilityViolations === 0 && creeperViolations === 0 && spiderViolations === 0 && healthFormulaViolations === 0) {
   console.log("\nALL 100,000 TESTS PASSED WITH ZERO VIOLATIONS!");
