@@ -90,17 +90,19 @@ export function registerCustomCommands() {
         ]
       }, handleHudCommand);
 
-      // 3. Register Admin Commands (Permission: Admin)
+      // 3. Register Admin Commands (Permission: GameDirectors / OP Level 1, cheatsRequired: false)
       registry.registerCommand({
         name: "infernalmobs:config",
         description: "Display current world configuration",
-        permissionLevel: CommandPermissionLevel.Admin
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        cheatsRequired: false
       }, handleConfigCommand);
 
       registry.registerCommand({
         name: "infernalmobs:always",
         description: "Configure entities that always spawn as Infernal",
-        permissionLevel: CommandPermissionLevel.Admin,
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        cheatsRequired: false,
         mandatoryParameters: [
           { name: "infernalmobs:always_action", type: CustomCommandParamType.Enum }
         ],
@@ -112,7 +114,8 @@ export function registerCustomCommands() {
       registry.registerCommand({
         name: "infernalmobs:set",
         description: "Modify an Infernal Mobs configuration option",
-        permissionLevel: CommandPermissionLevel.Admin,
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        cheatsRequired: false,
         mandatoryParameters: [
           { name: "infernalmobs:config_options", type: CustomCommandParamType.Enum },
           { name: "value", type: CustomCommandParamType.String }
@@ -122,7 +125,8 @@ export function registerCustomCommands() {
       registry.registerCommand({
         name: "infernalmobs:modifierconfig",
         description: "Enable or disable a modifier for new spawns",
-        permissionLevel: CommandPermissionLevel.Admin,
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        cheatsRequired: false,
         mandatoryParameters: [
           { name: "infernalmobs:all_modifiers", type: CustomCommandParamType.Enum },
           { name: "infernalmobs:toggle", type: CustomCommandParamType.Enum }
@@ -132,7 +136,8 @@ export function registerCustomCommands() {
       registry.registerCommand({
         name: "infernalmobs:make",
         description: "Convert targeted mob into an infernal mob",
-        permissionLevel: CommandPermissionLevel.Admin,
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        cheatsRequired: false,
         optionalParameters: [
           { name: "infernalmobs:tier_enum", type: CustomCommandParamType.Enum }
         ]
@@ -141,7 +146,8 @@ export function registerCustomCommands() {
       registry.registerCommand({
         name: "infernalmobs:setmods",
         description: "Set custom modifiers on the targeted mob",
-        permissionLevel: CommandPermissionLevel.Admin,
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        cheatsRequired: false,
         mandatoryParameters: [
           { name: "modifiers", type: CustomCommandParamType.String }
         ]
@@ -150,19 +156,22 @@ export function registerCustomCommands() {
       registry.registerCommand({
         name: "infernalmobs:remove",
         description: "Remove infernal status from targeted mob",
-        permissionLevel: CommandPermissionLevel.Admin
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        cheatsRequired: false
       }, handleRemoveCommand);
 
       registry.registerCommand({
         name: "infernalmobs:reroll",
         description: "Reroll modifiers and name for targeted infernal mob",
-        permissionLevel: CommandPermissionLevel.Admin
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        cheatsRequired: false
       }, handleRerollCommand);
 
       registry.registerCommand({
         name: "infernalmobs:scan",
         description: "Scan for nearby loaded infernal mobs",
-        permissionLevel: CommandPermissionLevel.Admin,
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        cheatsRequired: false,
         optionalParameters: [
           { name: "radius", type: CustomCommandParamType.Integer }
         ]
@@ -171,19 +180,22 @@ export function registerCustomCommands() {
       registry.registerCommand({
         name: "infernalmobs:debug",
         description: "Technical diagnostics of targeted mob",
-        permissionLevel: CommandPermissionLevel.Admin
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        cheatsRequired: false
       }, handleDebugCommand);
 
       registry.registerCommand({
         name: "infernalmobs:reload",
         description: "Reload Infernal Mobs configuration",
-        permissionLevel: CommandPermissionLevel.Admin
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        cheatsRequired: false
       }, handleReloadCommand);
 
       registry.registerCommand({
         name: "infernalmobs:resetconfig",
         description: "Reset configuration to default values (requires confirmation)",
-        permissionLevel: CommandPermissionLevel.Admin,
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        cheatsRequired: false,
         mandatoryParameters: [
           { name: "confirm", type: CustomCommandParamType.String }
         ]
