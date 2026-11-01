@@ -3,9 +3,15 @@
  * Used by test suite and offline validation scripts
  */
 
+const dynamicProperties = new Map();
+
 export const world = {
-  getDynamicProperty: () => undefined,
-  setDynamicProperty: () => {},
+  getDynamicProperty: (key) => dynamicProperties.get(key),
+  setDynamicProperty: (key, val) => {
+    if (val === undefined) dynamicProperties.delete(key);
+    else dynamicProperties.set(key, val);
+  },
+  clearDynamicProperties: () => dynamicProperties.clear(),
   getAllPlayers: () => [],
   beforeEvents: {
     entityHurt: { subscribe: () => {} }

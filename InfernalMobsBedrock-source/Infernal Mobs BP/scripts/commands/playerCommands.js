@@ -22,6 +22,7 @@ export function handleHelpCommand(origin) {
     "§e/infernalmobs:hud <on|off>§7 - Toggle your personal combat HUD\n\n" +
     "§c[Admin Commands (Requires Operator)]§r\n" +
     "§e/infernalmobs:config§7 - View world configuration\n" +
+    "§e/infernalmobs:always <add|remove|list> [entityId]§7 - Configure always infernal entities\n" +
     "§e/infernalmobs:set <opt> <val>§7 - Change config value\n" +
     "§e/infernalmobs:modifierconfig <id> <on|off>§7 - Toggle modifier\n" +
     "§e/infernalmobs:make [tier]§7 - Convert pointed mob to infernal\n" +

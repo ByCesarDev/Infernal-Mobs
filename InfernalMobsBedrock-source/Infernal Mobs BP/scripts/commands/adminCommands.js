@@ -8,7 +8,16 @@ import { system, CustomCommandStatus } from "@minecraft/server";
 import { SCHEMA_VERSION, TIER } from "../core/constants.js";
 import { MODIFIER_IDS, areModifiersCompatible, isModifierAllowedOnSpecies } from "../data/incompatibilities.js";
 import { clearInfernalState, getInfernalState } from "../storage/entityState.js";
-import { getConfig, loadWorldConfig, resetWorldConfig, setModifierEnabledConfig, updateConfigOption } from "../storage/worldConfig.js";
+import {
+  addAlwaysInfernalEntity,
+  getAlwaysInfernalEntities,
+  getConfig,
+  loadWorldConfig,
+  removeAlwaysInfernalEntity,
+  resetWorldConfig,
+  setModifierEnabledConfig,
+  updateConfigOption
+} from "../storage/worldConfig.js";
 import { createInfernal } from "../core/spawnManager.js";
 import { getTrackedInfernal, unregisterInfernal } from "../core/infernalManager.js";
 import { restoreVanillaHealth } from "../systems/healthSystem.js";
@@ -32,8 +41,22 @@ function getPointedLivingEntity(player, maxDistance = 20) {
   return null;
 }
 
+export function isValidEntityIdentifier(identifier) {
+  if (typeof identifier !== "string") return false;
+  const trimmed = identifier.trim().toLowerCase();
+  return /^[a-z0-9_.-]+:[a-z0-9_./-]+$/.test(trimmed);
+}
+
 export function handleConfigCommand() {
   const config = getConfig();
+  const alwaysEntities = Array.isArray(config.entitiesAlwaysInfernal) ? config.entitiesAlwaysInfernal : [];
+  let alwaysText = "\n§6Always Infernal Entities:§r\n";
+  if (alwaysEntities.length === 0) {
+    alwaysText += "§7None configured (Total: 0)";
+  } else {
+    alwaysText += alwaysEntities.map((id) => `§e${id}`).join("\n") + `\n§7Total: ${alwaysEntities.length}`;
+  }
+
   const info = "§6=== Infernal Mobs World Configuration ===§r\n" +
     `§7Elite Rarity: §f1 in ${config.eliteRarity}\n` +
     `§7Ultra Rarity: §f1 in ${config.ultraRarity}\n` +
@@ -48,9 +71,102 @@ export function handleConfigCommand() {
     `§7XP: §f${config.xpEnabled ? "ON" : "OFF"}\n` +
     `§7Anti-Farm: §f${config.antiFarm ? "ON" : "OFF"}\n` +
     `§7Debug: §f${config.debug ? "ON" : "OFF"}\n` +
-    `§7Schema Version: §f${SCHEMA_VERSION}`;
+    `§7Schema Version: §f${SCHEMA_VERSION}\n` +
+    alwaysText;
 
   return { status: CustomCommandStatus.Success, message: info };
+}
+
+export function handleAlwaysCommand(origin, actionArg, entityIdArg) {
+  const action = String(actionArg ?? "").trim().toLowerCase();
+  const player = origin?.sourceEntity ?? origin?.initiator;
+
+  if (action === "list") {
+    const entities = getAlwaysInfernalEntities();
+    let msg = "§6=== Always Infernal Entities ===§r\n";
+    if (entities.length === 0) {
+      msg += "§7No entities configured.\n§7Total: 0 entities";
+    } else {
+      msg += entities.map((id) => `§e${id}`).join("\n") + `\n§7Total: ${entities.length} entities`;
+    }
+    return { status: CustomCommandStatus.Success, message: msg };
+  }
+
+  if (action === "add") {
+    if (!entityIdArg) {
+      return {
+        status: CustomCommandStatus.Failure,
+        message: "§cUsage: /infernalmobs:always add <entityId>"
+      };
+    }
+
+    const raw = String(entityIdArg).trim().toLowerCase();
+    const entityId = raw.includes(":") ? raw : `minecraft:${raw}`;
+
+    if (!isValidEntityIdentifier(entityId)) {
+      return {
+        status: CustomCommandStatus.Failure,
+        message: `§cInvalid entity identifier: '${entityIdArg}'. Must match format 'namespace:name' (e.g. minecraft:wither).`
+      };
+    }
+
+    const currentList = getAlwaysInfernalEntities();
+    if (currentList.includes(entityId)) {
+      return {
+        status: CustomCommandStatus.Failure,
+        message: `§cEntity '${entityId}' is already configured as always infernal.`
+      };
+    }
+
+    system.run(() => {
+      const res = addAlwaysInfernalEntity(entityId);
+      if (player?.sendMessage) {
+        player.sendMessage(res.success ? `§a${res.message}` : `§c${res.message}`);
+      }
+    });
+
+    return {
+      status: CustomCommandStatus.Success,
+      message: `§7Adding '${entityId}' to always infernal entities...`
+    };
+  }
+
+  if (action === "remove") {
+    if (!entityIdArg) {
+      return {
+        status: CustomCommandStatus.Failure,
+        message: "§cUsage: /infernalmobs:always remove <entityId>"
+      };
+    }
+
+    const raw = String(entityIdArg).trim().toLowerCase();
+    const entityId = raw.includes(":") ? raw : `minecraft:${raw}`;
+
+    const currentList = getAlwaysInfernalEntities();
+    if (!currentList.includes(entityId)) {
+      return {
+        status: CustomCommandStatus.Failure,
+        message: `§cEntity '${entityId}' is not configured as always infernal.`
+      };
+    }
+
+    system.run(() => {
+      const res = removeAlwaysInfernalEntity(entityId);
+      if (player?.sendMessage) {
+        player.sendMessage(res.success ? `§a${res.message}` : `§c${res.message}`);
+      }
+    });
+
+    return {
+      status: CustomCommandStatus.Success,
+      message: `§7Removing '${entityId}' from always infernal entities...`
+    };
+  }
+
+  return {
+    status: CustomCommandStatus.Failure,
+    message: "§cUsage: /infernalmobs:always <add|remove|list> [entityId]"
+  };
 }
 
 export function handleSetCommand(origin, option, value) {

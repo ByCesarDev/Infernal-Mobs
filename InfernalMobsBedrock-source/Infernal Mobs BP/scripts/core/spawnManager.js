@@ -21,31 +21,35 @@ import { registerInfernal } from "./infernalManager.js";
 export function isEligibleForInfernal(entity, config = null, isNaturalSpawn = false) {
   if (!isEntityValid(entity) || !isEntityAlive(entity)) return false;
   if (isPlayer(entity)) return false;
-
-  const currentConfig = config ?? getConfig();
-
-  // Dimension blacklist check
-  const dimId = entity.dimension.id;
-  if (currentConfig.dimensionBlacklist && currentConfig.dimensionBlacklist.includes(dimId)) {
-    return false;
-  }
-
-  // Tamed animals are never infernal
   if (isTamed(entity)) return false;
 
   // Must have a health component
   const health = safeGetHealth(entity);
   if (!health) return false;
 
+  const currentConfig = config ?? getConfig();
+
+  // Dimension blacklist always takes priority
+  const dimId = entity.dimension?.id;
+  if (dimId && Array.isArray(currentConfig.dimensionBlacklist) && currentConfig.dimensionBlacklist.includes(dimId)) {
+    return false;
+  }
+
   const typeId = entity.typeId;
 
+  // Explicitly configured entities bypass entityBlacklist and entityWhitelist
+  const isAlwaysInfernal = Array.isArray(currentConfig.entitiesAlwaysInfernal) && currentConfig.entitiesAlwaysInfernal.includes(typeId);
+  if (isAlwaysInfernal) {
+    return true;
+  }
+
   // Entity type blacklist
-  if (currentConfig.entityBlacklist && currentConfig.entityBlacklist.includes(typeId)) {
+  if (Array.isArray(currentConfig.entityBlacklist) && currentConfig.entityBlacklist.includes(typeId)) {
     return false;
   }
 
   // Whitelist check if populated
-  if (currentConfig.entityWhitelist && currentConfig.entityWhitelist.length > 0) {
+  if (Array.isArray(currentConfig.entityWhitelist) && currentConfig.entityWhitelist.length > 0) {
     if (!currentConfig.entityWhitelist.includes(typeId)) {
       return false;
     }
@@ -62,14 +66,14 @@ export function isEligibleForInfernal(entity, config = null, isNaturalSpawn = fa
 /**
  * Rolls whether a mob becomes infernal and calculates the target modifier count and rolled tier
  * Following Java's exact chained rolls:
- * 1. Elite: 1 / eliteRarity -> 2-4 mods (Rare)
+ * 1. Elite: 1 / eliteRarity -> 2-4 mods (Rare) [Guaranteed if guaranteedElite is true]
  * 2. If Elite, Ultra: 1 / ultraRarity -> + 3-4 mods (total 5-8, Ultra)
  * 3. If Ultra, Infernal: 1 / infernoRarity -> + 3-4 mods (total 8-12, Infernal)
  */
-export function rollInfernalSpawn(config = null) {
+export function rollInfernalSpawn(config = null, guaranteedElite = false) {
   const currentConfig = config ?? getConfig();
 
-  if (!rollChance(currentConfig.eliteRarity)) {
+  if (!guaranteedElite && !rollChance(currentConfig.eliteRarity)) {
     return { count: 0, tier: null };
   }
 
@@ -92,8 +96,8 @@ export function rollInfernalSpawn(config = null) {
 /**
  * Convenience wrapper returning just the target modifier count
  */
-export function rollModifierCount(config = null) {
-  return rollInfernalSpawn(config).count;
+export function rollModifierCount(config = null, guaranteedElite = false) {
+  return rollInfernalSpawn(config, guaranteedElite).count;
 }
 
 /**
@@ -151,20 +155,9 @@ export function processEntitySpawn(entity) {
   }
 
   const typeId = entity.typeId;
-  const isForced = config.entitiesAlwaysInfernal && config.entitiesAlwaysInfernal.includes(typeId);
+  const isForced = Array.isArray(config.entitiesAlwaysInfernal) && config.entitiesAlwaysInfernal.includes(typeId);
 
-  let targetModCount = 0;
-  if (isForced) {
-    targetModCount = 2 + randomInt(0, 2); // Guaranteed base elite
-    if (rollChance(config.ultraRarity)) {
-      targetModCount += 3 + randomInt(0, 1);
-      if (rollChance(config.infernoRarity)) {
-        targetModCount += 3 + randomInt(0, 1);
-      }
-    }
-  } else {
-    targetModCount = rollModifierCount(config);
-  }
+  const targetModCount = rollModifierCount(config, isForced);
 
   if (targetModCount <= 0) {
     markProcessedNonInfernal(entity);
@@ -202,6 +195,7 @@ export function createInfernal(entity, forcedTier = null, forcedModifiers = null
 
   if (modifiers.length === 0) {
     markProcessedNonInfernal(entity);
+    logInfo("spawn", `No valid modifiers available for entity ${entity.typeId} (${entity.id}). Infernal creation aborted.`);
     return null;
   }
 

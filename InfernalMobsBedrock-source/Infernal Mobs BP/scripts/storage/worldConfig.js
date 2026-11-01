@@ -8,7 +8,23 @@ import { PROPERTIES } from "../core/constants.js";
 import { DEFAULT_CONFIG } from "../data/defaultConfig.js";
 import { logError, logInfo, setDebugLogging } from "../util/log.js";
 
-let inMemoryConfig = { ...DEFAULT_CONFIG };
+let inMemoryConfig = { ...DEFAULT_CONFIG, entitiesAlwaysInfernal: [...DEFAULT_CONFIG.entitiesAlwaysInfernal] };
+
+function sanitizeAlwaysInfernalList(list) {
+  if (!Array.isArray(list)) return [];
+  const cleaned = [];
+  const seen = new Set();
+  for (const item of list) {
+    if (typeof item === "string" && item.trim()) {
+      const normalized = item.trim().toLowerCase();
+      if (!seen.has(normalized)) {
+        seen.add(normalized);
+        cleaned.push(normalized);
+      }
+    }
+  }
+  return cleaned;
+}
 
 /**
  * Loads configuration from world dynamic properties or initializes defaults
@@ -19,13 +35,14 @@ export function loadWorldConfig() {
     if (typeof raw === "string" && raw) {
       const parsed = JSON.parse(raw);
       inMemoryConfig = { ...DEFAULT_CONFIG, ...parsed };
+      inMemoryConfig.entitiesAlwaysInfernal = sanitizeAlwaysInfernalList(inMemoryConfig.entitiesAlwaysInfernal);
     } else {
-      inMemoryConfig = { ...DEFAULT_CONFIG };
+      inMemoryConfig = { ...DEFAULT_CONFIG, entitiesAlwaysInfernal: [] };
       saveWorldConfig();
     }
   } catch (error) {
     logError("worldConfig", "Failed loading world config, using defaults", error);
-    inMemoryConfig = { ...DEFAULT_CONFIG };
+    inMemoryConfig = { ...DEFAULT_CONFIG, entitiesAlwaysInfernal: [] };
   }
   setDebugLogging(inMemoryConfig.debug);
   return inMemoryConfig;
@@ -111,6 +128,13 @@ export function updateConfigOption(key, value) {
       if (key === "debug") setDebugLogging(boolVal);
       break;
     }
+    case "entitiesAlwaysInfernal": {
+      if (!Array.isArray(value)) {
+        return { success: false, message: "entitiesAlwaysInfernal must be an array of entity identifiers." };
+      }
+      inMemoryConfig.entitiesAlwaysInfernal = sanitizeAlwaysInfernalList(value);
+      break;
+    }
     default:
       inMemoryConfig[key] = value;
       break;
@@ -120,6 +144,78 @@ export function updateConfigOption(key, value) {
   if (saved) {
     logInfo("worldConfig", `Updated config option ${key} to ${inMemoryConfig[key]}`);
     return { success: true, message: `Config option '${key}' set to ${inMemoryConfig[key]}` };
+  }
+  return { success: false, message: "Failed to persist configuration to world dynamic property." };
+}
+
+/**
+ * Gets a shallow copy of the configured always infernal entity identifiers
+ * @returns {string[]}
+ */
+export function getAlwaysInfernalEntities() {
+  if (!Array.isArray(inMemoryConfig.entitiesAlwaysInfernal)) {
+    inMemoryConfig.entitiesAlwaysInfernal = [];
+  }
+  return [...inMemoryConfig.entitiesAlwaysInfernal];
+}
+
+/**
+ * Checks whether an entity type identifier is configured to always spawn as Infernal
+ * @param {string} typeId
+ * @returns {boolean}
+ */
+export function isAlwaysInfernalEntity(typeId) {
+  if (!typeId || !Array.isArray(inMemoryConfig.entitiesAlwaysInfernal)) return false;
+  return inMemoryConfig.entitiesAlwaysInfernal.includes(String(typeId).trim().toLowerCase());
+}
+
+/**
+ * Adds an entity type identifier to the always infernal list
+ * @param {string} typeId
+ * @returns {{ success: boolean, message: string }}
+ */
+export function addAlwaysInfernalEntity(typeId) {
+  if (!typeId || typeof typeId !== "string") {
+    return { success: false, message: "Invalid entity identifier." };
+  }
+  const normId = typeId.trim().toLowerCase();
+  if (!Array.isArray(inMemoryConfig.entitiesAlwaysInfernal)) {
+    inMemoryConfig.entitiesAlwaysInfernal = [];
+  }
+  if (inMemoryConfig.entitiesAlwaysInfernal.includes(normId)) {
+    return { success: false, message: `Entity '${normId}' is already in always infernal list.` };
+  }
+  inMemoryConfig.entitiesAlwaysInfernal.push(normId);
+  const saved = saveWorldConfig();
+  if (saved) {
+    logInfo("worldConfig", `Added '${normId}' to entitiesAlwaysInfernal`);
+    return { success: true, message: `Added '${normId}' to always infernal entities.` };
+  }
+  return { success: false, message: "Failed to persist configuration to world dynamic property." };
+}
+
+/**
+ * Removes an entity type identifier from the always infernal list
+ * @param {string} typeId
+ * @returns {{ success: boolean, message: string }}
+ */
+export function removeAlwaysInfernalEntity(typeId) {
+  if (!typeId || typeof typeId !== "string") {
+    return { success: false, message: "Invalid entity identifier." };
+  }
+  const normId = typeId.trim().toLowerCase();
+  if (!Array.isArray(inMemoryConfig.entitiesAlwaysInfernal)) {
+    inMemoryConfig.entitiesAlwaysInfernal = [];
+  }
+  const index = inMemoryConfig.entitiesAlwaysInfernal.indexOf(normId);
+  if (index === -1) {
+    return { success: false, message: `Entity '${normId}' is not configured as always infernal.` };
+  }
+  inMemoryConfig.entitiesAlwaysInfernal.splice(index, 1);
+  const saved = saveWorldConfig();
+  if (saved) {
+    logInfo("worldConfig", `Removed '${normId}' from entitiesAlwaysInfernal`);
+    return { success: true, message: `Removed '${normId}' from always infernal entities.` };
   }
   return { success: false, message: "Failed to persist configuration to world dynamic property." };
 }
@@ -148,7 +244,7 @@ export function isModifierConfigEnabled(modifierId) {
  * Resets configuration to default values
  */
 export function resetWorldConfig() {
-  inMemoryConfig = { ...DEFAULT_CONFIG, modsEnabled: {} };
+  inMemoryConfig = { ...DEFAULT_CONFIG, entitiesAlwaysInfernal: [], modsEnabled: {} };
   saveWorldConfig();
   setDebugLogging(inMemoryConfig.debug);
   return inMemoryConfig;

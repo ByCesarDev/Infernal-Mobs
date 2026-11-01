@@ -127,12 +127,19 @@ An entity is eligible when it is a supported hostile mob or declares the Bedrock
 
 Eligibility is further controlled by:
 
-- `dimensionBlacklist`
-- `entityBlacklist`
-- `entityWhitelist`
-- `entitiesAlwaysInfernal`
+- `dimensionBlacklist`: Dimension IDs where natural infernal conversion is completely disabled.
+- `entityBlacklist`: Entity identifiers that may never convert naturally (by default: Warden, Wither, Ender Dragon).
+- `entityWhitelist`: Optional explicit eligibility filter.
+- `entitiesAlwaysInfernal`: Entity identifiers configured for guaranteed (100%) natural infernal conversion.
 
-By default, the Warden, Wither, and Ender Dragon are excluded.
+#### Priority and Guaranteed Generation (`entitiesAlwaysInfernal`)
+
+Administrators can configure entities to always become infernal upon spawning via `/infernalmobs:always add <entityId>`:
+- **100% Conversion:** Configured entities are guaranteed to roll the base Elite tier (2–4 base modifiers).
+- **Random Tier Upgrades:** Subsequent upgrades to Ultra (1/7) and Infernal (1/7 after Ultra) remain random.
+- **Priority Override:** An explicit entry in `entitiesAlwaysInfernal` overrides `entityBlacklist` and `entityWhitelist`. This allows bosses like the Wither, Warden, or Ender Dragon (or custom addon bosses) to spawn as Infernals without having to wipe the global entity blacklist.
+- **Enforced Restrictions:** Entities must still be valid, alive, have a health component, and cannot be players or tamed pets. `dimensionBlacklist` always retains ultimate priority: no mob will convert in a blacklisted dimension.
+- **Standard Mobs:** Unconfigured monsters (zombies, skeletons, creepers, etc.) continue using standard random rolls (1 in 15).
 
 ## Health, names, HUD, and particles
 
@@ -256,7 +263,8 @@ These commands require operator-level permission.
 
 | Command | Description |
 |---|---|
-| `/infernalmobs:config` | Shows the current configuration. |
+| `/infernalmobs:config` | Shows the current configuration and always infernal entities. |
+| `/infernalmobs:always <add\|remove\|list> [entityId]` | Manages entity types that always spawn as Infernal mobs (100% conversion). |
 | `/infernalmobs:set <option> <value>` | Changes a supported configuration option. |
 | `/infernalmobs:modifierconfig <modifier> <on\|off>` | Enables or disables one modifier globally. |
 | `/infernalmobs:make [rare\|ultra\|infernal\|random]` | Converts an eligible mob in the crosshair into the selected tier. |
@@ -273,6 +281,11 @@ Examples:
 ```mcfunction
 /infernalmobs:make infernal
 /infernalmobs:setmods "storm, regen, bulwark, unyielding"
+/infernalmobs:always add minecraft:wither
+/infernalmobs:always add minecraft:warden
+/infernalmobs:always add minecraft:ender_dragon
+/infernalmobs:always list
+/infernalmobs:always remove minecraft:wither
 /infernalmobs:modifier alchemist
 /infernalmobs:set eliteRarity 20
 /infernalmobs:modifierconfig webber off

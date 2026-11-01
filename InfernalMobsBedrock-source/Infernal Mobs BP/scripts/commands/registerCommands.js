@@ -12,6 +12,7 @@ import {
   handleModifierCommand
 } from "./playerCommands.js";
 import {
+  handleAlwaysCommand,
   handleConfigCommand,
   handleDebugCommand,
   handleMakeCommand,
@@ -36,6 +37,7 @@ export function registerCustomCommands() {
       registry.registerEnum("infernalmobs:all_modifiers", [...MODIFIER_IDS]);
       registry.registerEnum("infernalmobs:toggle", ["on", "off"]);
       registry.registerEnum("infernalmobs:tier_enum", ["rare", "ultra", "infernal", "random"]);
+      registry.registerEnum("infernalmobs:always_action", ["add", "remove", "list"]);
       registry.registerEnum("infernalmobs:config_options", [
         "eliteRarity",
         "ultraRarity",
@@ -94,6 +96,18 @@ export function registerCustomCommands() {
         description: "Display current world configuration",
         permissionLevel: CommandPermissionLevel.Admin
       }, handleConfigCommand);
+
+      registry.registerCommand({
+        name: "infernalmobs:always",
+        description: "Configure entities that always spawn as Infernal",
+        permissionLevel: CommandPermissionLevel.Admin,
+        mandatoryParameters: [
+          { name: "infernalmobs:always_action", type: CustomCommandParamType.Enum }
+        ],
+        optionalParameters: [
+          { name: "entityId", type: CustomCommandParamType.String }
+        ]
+      }, handleAlwaysCommand);
 
       registry.registerCommand({
         name: "infernalmobs:set",

@@ -26,7 +26,8 @@ Port funcional 1:1 autorizado de **AtomicStryker's Infernal Mobs** para Minecraf
 - `/infernalmobs:hud <on|off>` - Preferencia individual para activar o desactivar el HUD en pantalla.
 
 ### Administradores (Permiso `Admin` - Operadores)
-- `/infernalmobs:config` - Muestra la configuración actual del mundo.
+- `/infernalmobs:config` - Muestra la configuración actual del mundo y la lista de entidades siempre infernales.
+- `/infernalmobs:always <add|remove|list> [entityId]` - Gestiona entidades con generación infernal garantizada al 100%.
 - `/infernalmobs:set <opción> <valor>` - Modifica opciones (rareza, daño máximo, factor de vida, etc.).
 - `/infernalmobs:modifierconfig <modificador> <on|off>` - Habilita o deshabilita modificadores para nuevos spawns.
 - `/infernalmobs:make [rare|ultra|infernal|random]` - Convierte el mob señalado en infernal.
@@ -37,6 +38,32 @@ Port funcional 1:1 autorizado de **AtomicStryker's Infernal Mobs** para Minecraf
 - `/infernalmobs:debug` - Diagnóstico técnico del mob (vida base/infernal, cooldowns, 1UP, choke backend).
 - `/infernalmobs:reload` - Recarga la configuración del mundo.
 - `/infernalmobs:resetconfig confirm` - Restablece la configuración predeterminada.
+
+---
+
+## Generación Garantizada (`entitiesAlwaysInfernal`)
+
+Permite a los administradores configurar tipos de entidades para que tengan un **100% de probabilidad** de convertirse en mobs infernales al spawnear naturalmente.
+
+- **Generación Base Garantizada:** Las entidades configuradas siempre reciben el rango Elite (2–4 modificadores base).
+- **Mejoras Escalonadas Aleatorias:** Las probabilidades de mejora a Ultra (1 en 7) e Infernal (1 en 7 tras Ultra) siguen siendo aleatorias.
+- **Monstruos Normales:** Criaturas estándar (zombies, esqueletos, creepers, etc.) conservan intacta su probabilidad aleatoria original (1 en 15).
+- **Prioridad de Inclusión Explícita:** `entitiesAlwaysInfernal` tiene prioridad sobre `entityBlacklist` y `entityWhitelist`, permitiendo habilitar jefes como el Wither, Warden o Ender Dragon sin necesidad de vaciar la lista negra general.
+- **Restricciones Activas:** Las entidades configuradas deben ser válidas, vivas, con componente de salud, y no ser jugadores ni mascotas domesticadas. `dimensionBlacklist` sigue teniendo prioridad absoluta: si una dimensión está bloqueada, ninguna entidad se convertirá en ella.
+
+### Ejemplos de uso administrativo:
+```mcfunction
+# Garantizar conversión en jefes
+/infernalmobs:always add minecraft:wither
+/infernalmobs:always add minecraft:warden
+/infernalmobs:always add minecraft:ender_dragon
+
+# Consultar entidades configuradas
+/infernalmobs:always list
+
+# Quitar una entidad de la lista
+/infernalmobs:always remove minecraft:wither
+```
 
 ---
 

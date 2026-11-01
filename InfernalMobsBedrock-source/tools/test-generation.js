@@ -11,10 +11,22 @@
 
 import { DEFAULT_CONFIG } from "../Infernal Mobs BP/scripts/data/defaultConfig.js";
 import { TIER } from "../Infernal Mobs BP/scripts/core/constants.js";
-import { rollInfernalSpawn, selectModifiers, calculateVisualTier } from "../Infernal Mobs BP/scripts/core/spawnManager.js";
+import { rollInfernalSpawn, selectModifiers, calculateVisualTier, isEligibleForInfernal, rollModifierCount, processEntitySpawn, createInfernal } from "../Infernal Mobs BP/scripts/core/spawnManager.js";
 import { calculateInfernalMaxHealth } from "../Infernal Mobs BP/scripts/systems/healthSystem.js";
-import { INCOMPATIBLE_MAP, SPECIES_BANNED_MODS } from "../Infernal Mobs BP/scripts/data/incompatibilities.js";
+import { MODIFIER_IDS, INCOMPATIBLE_MAP, SPECIES_BANNED_MODS } from "../Infernal Mobs BP/scripts/data/incompatibilities.js";
 import { formatShortName, formatFullName, formatModifierRows, ensureStableName, buildRawFullName, buildRawModifierRows, buildRawHudMessage, formatSpeciesName, formatTitleCase } from "../Infernal Mobs BP/scripts/systems/namingSystem.js";
+import {
+  loadWorldConfig,
+  saveWorldConfig,
+  getConfig,
+  resetWorldConfig,
+  addAlwaysInfernalEntity,
+  removeAlwaysInfernalEntity,
+  getAlwaysInfernalEntities,
+  setModifierEnabledConfig
+} from "../Infernal Mobs BP/scripts/storage/worldConfig.js";
+import { handleAlwaysCommand, handleConfigCommand, isValidEntityIdentifier } from "../Infernal Mobs BP/scripts/commands/adminCommands.js";
+import { world } from "@minecraft/server";
 
 console.log("Starting statistical validation with 100,000 trials...");
 
@@ -262,6 +274,287 @@ if (!spiderShort.includes("Stinging Cave Spider") || spiderShort.includes("sting
 }
 
 console.log("Name stability, multilingual RawMessage, Title Case multi-word names & 12-modifier row tests passed with zero violations!");
+
+console.log("\nStarting Phase 8 Always Infernal feature validation suite...");
+
+function createMockEntity({
+  typeId = "minecraft:zombie",
+  id = "test-1",
+  isValid = true,
+  health = 20,
+  dimensionId = "minecraft:overworld",
+  isTamed = false,
+  isPlayer = false
+} = {}) {
+  const dynProps = new Map();
+  return {
+    id,
+    typeId: isPlayer ? "minecraft:player" : typeId,
+    isValid,
+    dimension: { id: dimensionId },
+    getDynamicProperty(key) {
+      return dynProps.get(key);
+    },
+    setDynamicProperty(key, val) {
+      dynProps.set(key, val);
+    },
+    getComponent(componentId) {
+      if (componentId === "minecraft:health") {
+        return {
+          currentValue: health,
+          defaultValue: health,
+          effectiveMax: health,
+          setCurrentValue: () => true
+        };
+      }
+      if (componentId === "minecraft:tameable" && isTamed) {
+        return { tamedToPlayerId: "player-1" };
+      }
+      return null;
+    },
+    extinguishFire() {}
+  };
+}
+
+// 1. Unconfigured zombie retains standard 1/15 eligibility and probability
+const testZombie = createMockEntity({ typeId: "minecraft:zombie" });
+if (!isEligibleForInfernal(testZombie, DEFAULT_CONFIG, true)) {
+  throw new Error("Test 1 failed: Standard zombie should be eligible naturally.");
+}
+
+// 2. Configured Wither, Warden, Ender Dragon always get positive modifier count (100% conversion)
+const bossTypes = ["minecraft:wither", "minecraft:warden", "minecraft:ender_dragon"];
+for (const bossType of bossTypes) {
+  const bossConfig = {
+    ...DEFAULT_CONFIG,
+    entitiesAlwaysInfernal: [bossType]
+  };
+  const bossEntity = createMockEntity({ typeId: bossType, health: 300 });
+
+  if (!isEligibleForInfernal(bossEntity, bossConfig, true)) {
+    throw new Error(`Test 2 failed: Configured ${bossType} must be eligible despite default blacklist!`);
+  }
+
+  // Verify that rollModifierCount with guaranteed = true always returns >= 2
+  for (let t = 0; t < 1000; t++) {
+    const count = rollModifierCount(bossConfig, true);
+    if (count < 2 || count > 12) {
+      throw new Error(`Test 2 failed: Guaranteed roll returned invalid count: ${count}`);
+    }
+  }
+}
+
+// 3. Ultra and Infernal upgrade rates remain random for guaranteed entities
+let bossRare = 0;
+let bossUltra = 0;
+let bossInfernal = 0;
+const bossTrials = 50000;
+for (let t = 0; t < bossTrials; t++) {
+  const roll = rollInfernalSpawn(DEFAULT_CONFIG, true);
+  if (roll.tier === TIER.INFERNAL) bossInfernal++;
+  else if (roll.tier === TIER.ULTRA) bossUltra++;
+  else bossRare++;
+}
+const bossUltraOrAbove = bossUltra + bossInfernal;
+const bossUltraRate = bossUltraOrAbove / bossTrials;
+const bossInfernalRate = bossInfernal / bossUltraOrAbove;
+if (bossUltraRate < 0.12 || bossUltraRate > 0.17) {
+  throw new Error(`Test 3 failed: Guaranteed entity Ultra upgrade rate out of bounds: ${(bossUltraRate * 100).toFixed(2)}%`);
+}
+if (bossInfernalRate < 0.11 || bossInfernalRate > 0.18) {
+  throw new Error(`Test 3 failed: Guaranteed entity Infernal upgrade rate out of bounds: ${(bossInfernalRate * 100).toFixed(2)}%`);
+}
+
+// 4. Configured entity bypasses entityBlacklist
+const witherBlacklistConfig = {
+  ...DEFAULT_CONFIG,
+  entityBlacklist: ["minecraft:wither", "minecraft:warden"],
+  entitiesAlwaysInfernal: ["minecraft:wither"]
+};
+const witherEnt = createMockEntity({ typeId: "minecraft:wither", health: 300 });
+if (!isEligibleForInfernal(witherEnt, witherBlacklistConfig, true)) {
+  throw new Error("Test 4 failed: entitiesAlwaysInfernal must bypass entityBlacklist!");
+}
+
+// 5. Configured entity bypasses entityWhitelist
+const witherWhitelistConfig = {
+  ...DEFAULT_CONFIG,
+  entityWhitelist: ["minecraft:zombie"],
+  entitiesAlwaysInfernal: ["minecraft:wither"]
+};
+if (!isEligibleForInfernal(witherEnt, witherWhitelistConfig, true)) {
+  throw new Error("Test 5 failed: entitiesAlwaysInfernal must bypass entityWhitelist!");
+}
+const skeletonEnt = createMockEntity({ typeId: "minecraft:skeleton" });
+if (isEligibleForInfernal(skeletonEnt, witherWhitelistConfig, true)) {
+  throw new Error("Test 5 failed: Unconfigured entity not on whitelist must remain ineligible!");
+}
+
+// 6. Dimension blacklist still rejects configured entities
+const dimBlacklistConfig = {
+  ...DEFAULT_CONFIG,
+  dimensionBlacklist: ["minecraft:nether"],
+  entitiesAlwaysInfernal: ["minecraft:wither"]
+};
+const netherWither = createMockEntity({ typeId: "minecraft:wither", dimensionId: "minecraft:nether", health: 300 });
+if (isEligibleForInfernal(netherWither, dimBlacklistConfig, true)) {
+  throw new Error("Test 6 failed: dimensionBlacklist must take priority over entitiesAlwaysInfernal!");
+}
+
+// 7. Unconfigured blacklisted entities remain rejected
+const defaultWither = createMockEntity({ typeId: "minecraft:wither", health: 300 });
+const defaultWarden = createMockEntity({ typeId: "minecraft:warden", health: 500 });
+const defaultDragon = createMockEntity({ typeId: "minecraft:ender_dragon", health: 200 });
+if (isEligibleForInfernal(defaultWither, DEFAULT_CONFIG, true)) {
+  throw new Error("Test 7 failed: Unconfigured Wither must be rejected by default entityBlacklist.");
+}
+if (isEligibleForInfernal(defaultWarden, DEFAULT_CONFIG, true)) {
+  throw new Error("Test 7 failed: Unconfigured Warden must be rejected by default entityBlacklist.");
+}
+if (isEligibleForInfernal(defaultDragon, DEFAULT_CONFIG, true)) {
+  throw new Error("Test 7 failed: Unconfigured Ender Dragon must be rejected by default entityBlacklist.");
+}
+
+// 8. Players, tamed mobs, invalid entities, and entities without health are rejected even if in entitiesAlwaysInfernal
+const forcedAllConfig = {
+  ...DEFAULT_CONFIG,
+  entitiesAlwaysInfernal: ["minecraft:player", "minecraft:wolf", "minecraft:zombie"]
+};
+const playerEnt = createMockEntity({ isPlayer: true });
+const tamedWolf = createMockEntity({ typeId: "minecraft:wolf", isTamed: true });
+const invalidEnt = createMockEntity({ typeId: "minecraft:zombie", isValid: false });
+const noHealthEnt = { id: "no-hp", typeId: "minecraft:zombie", isValid: true, dimension: { id: "minecraft:overworld" }, getComponent: () => null };
+
+if (isEligibleForInfernal(playerEnt, forcedAllConfig, true)) throw new Error("Test 8 failed: Players must NEVER be eligible!");
+if (isEligibleForInfernal(tamedWolf, forcedAllConfig, true)) throw new Error("Test 8 failed: Tamed mobs must NEVER be eligible!");
+if (isEligibleForInfernal(invalidEnt, forcedAllConfig, true)) throw new Error("Test 8 failed: Invalid entities must NEVER be eligible!");
+if (isEligibleForInfernal(noHealthEnt, forcedAllConfig, true)) throw new Error("Test 8 failed: Entities without health must NEVER be eligible!");
+
+// 9. worldConfig persistence and normalization
+resetWorldConfig();
+if (getAlwaysInfernalEntities().length !== 0) {
+  throw new Error("Test 9 failed: resetWorldConfig must clear entitiesAlwaysInfernal!");
+}
+
+// Add entity
+const add1 = addAlwaysInfernalEntity("minecraft:wither");
+if (!add1.success) throw new Error("Test 9 failed: addAlwaysInfernalEntity should succeed!");
+if (!getAlwaysInfernalEntities().includes("minecraft:wither")) {
+  throw new Error("Test 9 failed: minecraft:wither not found in list!");
+}
+
+// Reject duplicate
+const addDup = addAlwaysInfernalEntity("minecraft:wither");
+if (addDup.success) throw new Error("Test 9 failed: Duplicate entity addition must be rejected!");
+
+// Remove entity
+const rem1 = removeAlwaysInfernalEntity("minecraft:wither");
+if (!rem1.success) throw new Error("Test 9 failed: removeAlwaysInfernalEntity should succeed!");
+if (getAlwaysInfernalEntities().includes("minecraft:wither")) {
+  throw new Error("Test 9 failed: minecraft:wither should be removed!");
+}
+
+// Remove non-existent entity
+const remNonExistent = removeAlwaysInfernalEntity("minecraft:wither");
+if (remNonExistent.success) throw new Error("Test 9 failed: Removing non-existent entity should return failure!");
+
+// 10. Legacy config loading with normalization and deduplication
+world.setDynamicProperty("infernal:world_config", JSON.stringify({
+  entitiesAlwaysInfernal: ["minecraft:Wither", "  MINECRAFT:WITHER  ", "minecraft:warden", "", 123]
+}));
+loadWorldConfig();
+const loaded = getAlwaysInfernalEntities();
+if (loaded.length !== 2 || !loaded.includes("minecraft:wither") || !loaded.includes("minecraft:warden")) {
+  throw new Error(`Test 10 failed: Legacy normalization failed. Got: ${JSON.stringify(loaded)}`);
+}
+
+// Missing entitiesAlwaysInfernal in legacy config
+world.setDynamicProperty("infernal:world_config", JSON.stringify({
+  eliteRarity: 20
+}));
+loadWorldConfig();
+const loadedMissing = getAlwaysInfernalEntities();
+if (!Array.isArray(loadedMissing) || loadedMissing.length !== 0) {
+  throw new Error("Test 10 failed: Missing entitiesAlwaysInfernal should default to empty array!");
+}
+resetWorldConfig();
+
+// 11. Empty modifier pools safely handled
+// Disable all modifiers temporarily
+for (const mod of MODIFIER_IDS) {
+  setModifierEnabledConfig(mod, false);
+}
+const mockVictim = createMockEntity({ typeId: "minecraft:zombie", health: 20 });
+const resultWhenAllDisabled = createInfernal(mockVictim, null, null, 4);
+if (resultWhenAllDisabled !== null) {
+  throw new Error("Test 11 failed: createInfernal must return null when no modifiers are available!");
+}
+// Re-enable all modifiers
+for (const mod of MODIFIER_IDS) {
+  setModifierEnabledConfig(mod, true);
+}
+
+// 12. Admin command tests (handleAlwaysCommand & handleConfigCommand)
+resetWorldConfig();
+const mockPlayerMessages = [];
+const mockPlayer = {
+  sendMessage: (msg) => mockPlayerMessages.push(msg)
+};
+const mockOrigin = { sourceEntity: mockPlayer, initiator: mockPlayer };
+
+// Command: list when empty
+const listEmpty = handleAlwaysCommand(mockOrigin, "list");
+if (!listEmpty.message.includes("No entities configured") || !listEmpty.message.includes("Total: 0")) {
+  throw new Error(`Test 12 failed: Empty list format unexpected: ${listEmpty.message}`);
+}
+
+// Command: add valid
+const cmdAdd = handleAlwaysCommand(mockOrigin, "add", "minecraft:wither");
+if (cmdAdd.status !== 0) throw new Error("Test 12 failed: /infernalmobs:always add should succeed!");
+if (!getAlwaysInfernalEntities().includes("minecraft:wither")) {
+  throw new Error("Test 12 failed: Entity not in list after command!");
+}
+
+// Command: add duplicate
+const cmdAddDup = handleAlwaysCommand(mockOrigin, "add", "minecraft:wither");
+if (cmdAddDup.status === 0) throw new Error("Test 12 failed: Adding duplicate via command should fail!");
+
+// Command: add without namespace (auto-prefixes minecraft:)
+const cmdAddNoNs = handleAlwaysCommand(mockOrigin, "add", "warden");
+if (cmdAddNoNs.status !== 0) throw new Error("Test 12 failed: Auto-prefixing namespace should succeed!");
+if (!getAlwaysInfernalEntities().includes("minecraft:warden")) {
+  throw new Error("Test 12 failed: minecraft:warden not found after 'warden' add!");
+}
+
+// Command: add invalid identifier
+const cmdAddInvalid = handleAlwaysCommand(mockOrigin, "add", "Invalid Name With Spaces!");
+if (cmdAddInvalid.status === 0) throw new Error("Test 12 failed: Invalid entity identifier should fail!");
+
+// Command: list populated
+const listPopulated = handleAlwaysCommand(mockOrigin, "list");
+if (!listPopulated.message.includes("minecraft:wither") || !listPopulated.message.includes("minecraft:warden") || !listPopulated.message.includes("Total: 2 entities")) {
+  throw new Error(`Test 12 failed: Populated list format unexpected: ${listPopulated.message}`);
+}
+
+// Command: config output
+const configResult = handleConfigCommand();
+if (!configResult.message.includes("Always Infernal Entities") || !configResult.message.includes("minecraft:wither")) {
+  throw new Error(`Test 12 failed: handleConfigCommand does not show always infernal entities: ${configResult.message}`);
+}
+
+// Command: remove valid
+const cmdRem = handleAlwaysCommand(mockOrigin, "remove", "minecraft:wither");
+if (cmdRem.status !== 0) throw new Error("Test 12 failed: Remove via command should succeed!");
+if (getAlwaysInfernalEntities().includes("minecraft:wither")) {
+  throw new Error("Test 12 failed: Removed entity still present in list!");
+}
+
+// Command: remove not configured
+const cmdRemNotCfg = handleAlwaysCommand(mockOrigin, "remove", "minecraft:wither");
+if (cmdRemNotCfg.status === 0) throw new Error("Test 12 failed: Removing unconfigured entity via command should fail!");
+
+resetWorldConfig();
+console.log("Phase 8 Always Infernal validation suite passed with zero errors!");
 
 if (duplicateViolations === 0 && incompatibilityViolations === 0 && creeperViolations === 0 && spiderViolations === 0 && healthFormulaViolations === 0) {
   console.log("\nALL 100,000 TESTS PASSED WITH ZERO VIOLATIONS!");
