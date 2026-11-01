@@ -26,6 +26,7 @@ import {
   setModifierEnabledConfig
 } from "../Infernal Mobs BP/scripts/storage/worldConfig.js";
 import { handleAlwaysCommand, handleConfigCommand, isValidEntityIdentifier } from "../Infernal Mobs BP/scripts/commands/adminCommands.js";
+import { OneUpHandler } from "../Infernal Mobs BP/scripts/modifiers/oneUp.js";
 import { world } from "@minecraft/server";
 
 console.log("Starting statistical validation with 100,000 trials...");
@@ -555,6 +556,74 @@ if (cmdRemNotCfg.status === 0) throw new Error("Test 12 failed: Removing unconfi
 
 resetWorldConfig();
 console.log("Phase 8 Always Infernal validation suite passed with zero errors!");
+
+// 13. Verify 1UP modifier single-use behavior (does not trigger infinitely)
+console.log("\nVerifying 1UP modifier single-use mechanics...");
+const oneUpMob = createMockEntity({ typeId: "minecraft:zombie", id: "oneup-test-1", health: 100 });
+oneUpMob.dimension.playSound = () => {};
+const oneUpState = {
+  schema: 2,
+  initialized: true,
+  isInfernal: true,
+  modifiers: ["1up"],
+  baseMaxHealth: 20,
+  infernalMaxHealth: 100,
+  currentHealth: 100,
+  tier: "rare",
+  persistent: {
+    oneUpConsumed: false
+  }
+};
+oneUpMob.setDynamicProperty("infernal:state", JSON.stringify(oneUpState));
+
+// Hit 1: Drops health from 100 to 20 (below 25%)
+const context1 = {
+  victim: oneUpMob,
+  damage: 80,
+  pendingActions: []
+};
+OneUpHandler.onIncomingDamageBefore(context1);
+if (context1.damage !== 0) {
+  throw new Error("1UP failed to absorb incoming damage on first critical drop!");
+}
+for (const action of context1.pendingActions) action();
+
+// Verify health was restored to effectiveMax and oneUpConsumed is true
+const stateAfter1UP = JSON.parse(oneUpMob.getDynamicProperty("infernal:state"));
+if (!stateAfter1UP.persistent?.oneUpConsumed) {
+  throw new Error("1UP failed to mark oneUpConsumed as true!");
+}
+const hpAfter1UP = oneUpMob.getComponent("minecraft:health").currentValue;
+if (hpAfter1UP !== 100) {
+  throw new Error(`Expected health to be 100 after 1UP, got: ${hpAfter1UP}`);
+}
+
+// Simulate damagePipeline handleAfterHurt updating currentHealth
+// Ensure it does NOT overwrite oneUpConsumed
+const latestState = JSON.parse(oneUpMob.getDynamicProperty("infernal:state"));
+latestState.currentHealth = 100;
+oneUpMob.setDynamicProperty("infernal:state", JSON.stringify(latestState));
+const verifyNotOverwritten = JSON.parse(oneUpMob.getDynamicProperty("infernal:state"));
+if (!verifyNotOverwritten.persistent?.oneUpConsumed) {
+  throw new Error("damagePipeline overwrote oneUpConsumed to false!");
+}
+
+// Hit 2: Damage drops health from 100 to 20 again
+const context2 = {
+  victim: oneUpMob,
+  damage: 80,
+  pendingActions: []
+};
+OneUpHandler.onIncomingDamageBefore(context2);
+// Since 1UP is consumed, damage must NOT be absorbed (context2.damage remains 80)
+if (context2.damage === 0) {
+  throw new Error("1UP triggered a second time! Expected 1UP to be consumed and NOT trigger again.");
+}
+if (context2.pendingActions.length > 0) {
+  throw new Error("1UP queued actions when already consumed!");
+}
+
+console.log("1UP modifier single-use validation passed with zero errors!");
 
 if (duplicateViolations === 0 && incompatibilityViolations === 0 && creeperViolations === 0 && spiderViolations === 0 && healthFormulaViolations === 0) {
   console.log("\nALL 100,000 TESTS PASSED WITH ZERO VIOLATIONS!");

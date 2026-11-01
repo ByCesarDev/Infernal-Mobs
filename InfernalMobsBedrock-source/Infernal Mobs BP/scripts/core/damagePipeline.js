@@ -287,8 +287,15 @@ function processIncomingAfterHurt(event, victim, attacker, state, tick) {
   if (isEntityValid(victim) && isEntityAlive(victim)) {
     const health = safeGetHealth(victim);
     if (health) {
-      state.currentHealth = health.currentValue;
-      setInfernalState(victim, state);
+      // Re-read latest state to preserve mutations made by modifier handlers (e.g. 1UP, cooldowns)
+      const latestState = getInfernalState(victim) ?? state;
+      latestState.currentHealth = health.currentValue;
+      setInfernalState(victim, latestState);
+
+      const record = getTrackedInfernal(victim.id);
+      if (record) {
+        record.state = latestState;
+      }
     }
   }
 }
